@@ -1,0 +1,120 @@
+=========================================
+FACELOG - COMO LEVANTAR EL PROYECTO (DIA A DIA)
+=========================================
+
+Este documento asume que el proyecto YA esta instalado (ver
+INSTALACION.txt si todavia no lo instalaste).
+
+Aqui estan solo los pasos para arrancar y detener los tres componentes
+cada vez que quieras trabajar en el proyecto o hacer una demostracion.
+
+
+-----------------------------------------
+RESUMEN RAPIDO
+-----------------------------------------
+Hacen falta 2 o 3 terminales abiertas al mismo tiempo (una por
+componente). El orden no es estrictamente obligatorio, pero conviene
+levantar primero el backend.
+
+
+-----------------------------------------
+1. LEVANTAR EL BACKEND (LARAVEL)
+-----------------------------------------
+Terminal 1:
+
+  cd backend
+  php artisan serve
+
+Queda escuchando en: http://localhost:8000
+
+Si en esta sesion vas a subir una foto de enrolamiento facial, usa Apache
+en vez de este comando (ver seccion 4 mas abajo) — "artisan serve" no
+puede procesar esa funcion en Windows.
+
+Verificar que respondio: abrir http://localhost:8000/up en el navegador,
+debe decir "Application up".
+
+
+-----------------------------------------
+2. LEVANTAR EL FRONTEND (PLATAFORMA WEB)
+-----------------------------------------
+Terminal 2:
+
+  cd frontend
+  npm run dev
+
+Queda escuchando en: http://localhost:5173 — esa es la direccion que se
+abre en el navegador para usar la plataforma.
+
+Credenciales de prueba:
+
+  Email:    admin@facelog.test
+  Password: password
+
+
+-----------------------------------------
+3. LEVANTAR RECOGNITION-APP (RECONOCIMIENTO FACIAL, OPCIONAL)
+-----------------------------------------
+Solo hace falta si vas a probar el reconocimiento en vivo con la camara
+del laboratorio. Terminal 3:
+
+  cd recognition-app
+  venv\Scripts\activate
+  python src\main.py
+
+Requiere que ya exista un DEVICE_TOKEN valido en recognition-app\.env
+(se genera una sola vez desde el panel admin -> Dispositivos — ver
+INSTALACION.txt seccion 6 si todavia no lo hiciste).
+
+Detener con Ctrl+C.
+
+
+-----------------------------------------
+4. USAR APACHE EN VEZ DE "ARTISAN SERVE"
+   (necesario solo para subir fotos de enrolamiento)
+-----------------------------------------
+Si en esta sesion necesitas que funcione la subida de foto de enrolamiento
+facial, en vez del paso 1 hacer esto:
+
+  1. Arrancar Apache:
+     C:\xampp\apache_start.bat
+     (o el boton "Start" de Apache en el panel de control de XAMPP)
+
+  2. Confirmar en frontend\.env que dice:
+     VITE_API_BASE_URL=http://localhost:8088
+     Si no, cambiarlo y reiniciar "npm run dev" (paso 2).
+
+El backend queda escuchando en http://localhost:8088 en vez de :8000 —
+el resto del uso (login, crear estudiantes, asistencia, etc.) funciona
+exactamente igual.
+
+Para detener Apache: C:\xampp\apache_stop.bat
+(o el boton "Stop" del panel de XAMPP).
+
+
+-----------------------------------------
+5. DETENER TODO
+-----------------------------------------
+  - Backend (artisan serve):  Ctrl+C en su terminal.
+  - Frontend (npm run dev):   Ctrl+C en su terminal.
+  - recognition-app:          Ctrl+C en su terminal.
+  - Apache (si lo usaste):    C:\xampp\apache_stop.bat
+
+
+-----------------------------------------
+6. CORRER LAS PRUEBAS AUTOMATIZADAS (OPCIONAL)
+-----------------------------------------
+Util para confirmar que nada se rompio antes de una demo.
+
+Backend:
+
+  cd backend
+  php artisan test
+
+recognition-app:
+
+  cd recognition-app
+  venv\Scripts\activate
+  python -m pytest tests/ -q
+
+Ambas suites deben pasar sin errores.

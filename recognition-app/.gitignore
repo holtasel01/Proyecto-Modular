@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+.env
+queue.sqlite3
+
+# fotos de prueba manuales (de terceros, no para versionar — ver tests/fixtures/manual)
+tests/fixtures/manual/

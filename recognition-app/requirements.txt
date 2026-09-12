@@ -1,0 +1,13 @@
+# Cliente HTTP y configuración — instalados desde la Etapa 3
+requests==2.32.3
+python-dotenv==1.0.1
+
+# Visión artificial / reconocimiento facial — Etapa 5 (docs/02-diseno.md §11)
+deepface==0.0.93
+tf-keras
+opencv-python==4.10.0.84
+mediapipe==0.10.14
+numpy<2
+
+# Pruebas (Etapa 5/9)
+pytest==9.1.1

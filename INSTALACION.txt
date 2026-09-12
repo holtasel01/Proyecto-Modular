@@ -1,0 +1,289 @@
+=========================================
+FACELOG - MANUAL DE INSTALACION
+=========================================
+
+Este documento explica como instalar el proyecto Facelog desde cero en una
+maquina que no tiene nada configurado todavia.
+
+Para los pasos que se repiten cada vez que quieras trabajar en el proyecto
+(una vez ya instalado), ver el archivo COMO_LEVANTAR_EL_PROYECTO.txt.
+
+
+-----------------------------------------
+QUE SE VA A INSTALAR
+-----------------------------------------
+El proyecto tiene tres partes independientes, mas una base de datos:
+
+  backend/          -> Laravel, la API (PHP)
+  frontend/         -> React + TypeScript, la plataforma web
+  recognition-app/  -> Python, el reconocimiento facial
+  docs/             -> documentacion del proyecto
+
+
+-----------------------------------------
+1. REQUISITOS PREVIOS
+-----------------------------------------
+Instalar antes de empezar:
+
+  - PHP 8.2 o superior       (recomendado: XAMPP, incluye PHP + Apache)
+        https://www.apachefriends.org/
+  - Composer 2.x
+        https://getcomposer.org
+  - Node.js 20+ y npm
+        https://nodejs.org
+  - Python 3.12
+        https://www.python.org
+        (en Windows, marcar "Add to PATH" durante la instalacion)
+  - PostgreSQL 16 o superior
+        https://www.postgresql.org/download/
+
+Verificar que todo responde antes de continuar:
+
+  php -v
+  composer -V
+  node -v
+  npm -v
+  python --version
+  psql --version
+
+Si alguno de estos comandos falla, resolverlo antes de seguir.
+
+
+-----------------------------------------
+2. PREPARAR PHP Y COMPOSER
+-----------------------------------------
+
+2.1 Habilitar extensiones de PHP
+
+Abrir el archivo php.ini que usa tu PHP (el comando "php --ini" muestra la
+ruta exacta; con XAMPP suele ser C:\xampp\php\php.ini) y quitar el punto y
+coma (;) al inicio de estas lineas (si no existen, agregarlas):
+
+  extension=pdo_pgsql
+  extension=pgsql
+  extension=gd
+
+  - pdo_pgsql / pgsql: sin esto, Laravel falla con el error
+    "could not find driver" al conectar a PostgreSQL.
+  - gd: solo hace falta para correr las pruebas automatizadas del backend.
+
+Guardar el archivo y reiniciar cualquier servidor PHP que ya estuviera
+corriendo para que tome el cambio.
+
+Verificar:
+
+  php -m | grep -i "pgsql\|gd"
+
+Debe aparecer gd, pdo_pgsql y pgsql en la lista.
+
+2.2 Instalar Composer (solo si "composer -V" fallo en el paso 1)
+
+En Windows, sin el instalador grafico oficial, ejecutar esto en PowerShell:
+
+  $dir = "$HOME\composer"
+  New-Item -ItemType Directory -Force -Path $dir
+  Invoke-WebRequest -Uri "https://getcomposer.org/installer" -OutFile "$dir\composer-setup.php"
+  php "$dir\composer-setup.php" --install-dir="$dir" --filename=composer.phar
+
+Crear un archivo $dir\composer.bat con este contenido:
+
+  @echo off
+  php "%~dp0composer.phar" %*
+
+Agregar esa carpeta al PATH del usuario:
+
+  $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  [Environment]::SetEnvironmentVariable("Path", "$userPath;$dir", "User")
+
+Abrir una terminal nueva y confirmar con "composer -V".
+
+
+-----------------------------------------
+3. PREPARAR POSTGRESQL
+-----------------------------------------
+Con PostgreSQL instalado y su servicio corriendo, crear el rol y las bases
+de datos del proyecto. Se necesita la contraseña del superusuario "postgres"
+que se definio al instalar PostgreSQL.
+
+Entrar a psql:
+
+  psql -U postgres -h 127.0.0.1
+
+Dentro de psql, ejecutar:
+
+  CREATE ROLE facelog WITH LOGIN PASSWORD 'elige-una-contraseña';
+  CREATE DATABASE facelog OWNER facelog;
+  CREATE DATABASE facelog_testing OWNER facelog;
+  \q
+
+La segunda base (facelog_testing) es solo para las pruebas automatizadas.
+Anotar la contraseña elegida, se necesita en el paso 4.
+
+
+-----------------------------------------
+4. INSTALAR EL BACKEND (LARAVEL)
+-----------------------------------------
+
+  cd backend
+  composer install
+  copy .env.example .env
+  php artisan key:generate
+
+Editar el archivo backend\.env y completar:
+
+  DB_CONNECTION=pgsql
+  DB_HOST=127.0.0.1
+  DB_PORT=5432
+  DB_DATABASE=facelog
+  DB_USERNAME=facelog
+  DB_PASSWORD=la-contraseña-del-paso-3
+
+Luego:
+
+  php artisan migrate --seed
+
+Esto crea todas las tablas de la base de datos y siembra un usuario
+administrador de prueba:
+
+  Email:    admin@facelog.test
+  Password: password
+  Rol:      admin
+
+Para verificar que el backend quedo bien instalado:
+
+  php artisan serve
+
+Abrir en el navegador: http://localhost:8000/up
+Debe mostrar el texto "Application up". Dejar esa terminal abierta.
+
+NOTA: "php artisan serve" sirve para todo el backend EXCEPTO subir la foto
+de enrolamiento facial (esa funcion necesita Apache, ver el paso 7). Es una
+limitacion de Windows, no un problema del proyecto.
+
+
+-----------------------------------------
+5. INSTALAR EL FRONTEND (REACT + TYPESCRIPT)
+-----------------------------------------
+En otra terminal (dejando el backend corriendo en la anterior):
+
+  cd frontend
+  npm install
+  copy .env.example .env
+  npm run dev
+
+Abrir en el navegador: http://localhost:5173
+Debe aparecer la pantalla de login de Facelog. Entrar con
+admin@facelog.test / password para confirmar que el frontend ya se
+comunica correctamente con el backend.
+
+
+-----------------------------------------
+6. INSTALAR RECOGNITION-APP (PYTHON)
+-----------------------------------------
+En otra terminal:
+
+  cd recognition-app
+  python -m venv venv
+  venv\Scripts\activate
+  pip install -r requirements.txt
+
+Este pip install descarga aproximadamente 1 GB (DeepFace, TensorFlow,
+OpenCV, MediaPipe) — puede tardar varios minutos la primera vez.
+
+  copy config.example.env .env
+
+El archivo recognition-app\.env necesita un TOKEN DE DISPOSITIVO, que
+todavia no existe. Se genera asi:
+
+  1. En el navegador (con el frontend corriendo), entrar como admin.
+  2. Ir a "Dispositivos" -> "Nuevo dispositivo del laboratorio".
+  3. Copiar el token que aparece (solo se muestra una vez).
+  4. Pegarlo en recognition-app\.env como: DEVICE_TOKEN=el-token-copiado
+
+Para verificar la instalacion (no hace falta camara todavia):
+
+  python src\main.py
+
+Si el DEVICE_TOKEN es invalido, falla de inmediato con un error HTTP
+401/403 (ApiRejectedError) al sincronizar el catalogo — eso si es un
+problema real, revisar el token.
+
+Si el DEVICE_TOKEN es valido, imprime la linea
+"Facelog recognition-app - reconocimiento en vivo. Ctrl+C para salir."
+y luego intenta abrir la camara. Si la maquina no tiene camara conectada,
+en ese punto se cae con un traceback de Python ("No se pudo abrir la
+camara...") — eso es normal y NO significa que la instalacion este mal;
+simplemente confirma que ya paso la validacion del token. Detener con
+Ctrl+C (o dejar que termine solo por el error de camara).
+
+
+-----------------------------------------
+7. APACHE, SOLO PARA EL ENROLAMIENTO FACIAL VIA WEB
+-----------------------------------------
+"php artisan serve" no puede procesar la subida de la foto de enrolamiento
+en Windows. Para esa funcion especifica, hay que servir el backend con
+Apache en vez de "artisan serve".
+
+1. Confirmar que XAMPP incluye Apache (viene junto con PHP si se instalo
+   XAMPP en el paso 1).
+
+2. Agregar al final del archivo
+   C:\xampp\apache\conf\extra\httpd-vhosts.conf
+   (ajustando la ruta a donde tengas el proyecto):
+
+   Listen 8088
+   <VirtualHost *:8088>
+       DocumentRoot "C:/ruta/completa/al/proyecto/backend/public"
+       <Directory "C:/ruta/completa/al/proyecto/backend/public">
+           AllowOverride All
+           Require all granted
+       </Directory>
+   </VirtualHost>
+
+   Antes de agregar el "Listen", confirmar que el puerto 8088 este libre:
+
+   netstat -ano | findstr :8088
+
+   (no debe mostrar ninguna linea). Si tu maquina ya usa el 8088 para otra
+   cosa, elegir otro puerto libre y usarlo en vez de 8088 en todo este paso.
+
+3. Arrancar Apache: ejecutar C:\xampp\apache_start.bat
+   (o el boton "Start" de Apache en el panel de control de XAMPP).
+
+4. Cambiar en frontend\.env: VITE_API_BASE_URL=http://localhost:8088
+   y reiniciar "npm run dev".
+
+Con esto, subir una foto de enrolamiento desde el panel del estudiante o
+del admin ya funciona. El resto de los pasos de esta guia (4, 5 y 6) siguen
+funcionando igual con "artisan serve" normal — Apache solo hace falta para
+esta funcion puntual.
+
+
+-----------------------------------------
+8. VERIFICACION FINAL (checklist)
+-----------------------------------------
+Antes de dar la instalacion por terminada, confirmar cada punto:
+
+  [ ] http://localhost:8000/up (o :8088 si usas Apache) responde
+      "Application up".
+  [ ] http://localhost:5173 muestra el login y se puede entrar con
+      admin@facelog.test.
+  [ ] Se puede crear un estudiante desde "Estudiantes" -> "Nuevo
+      estudiante".
+  [ ] Se puede crear un dispositivo desde "Dispositivos" y copiar su
+      token.
+  [ ] recognition-app: "python src\main.py" llega al mensaje "reconocimiento
+      en vivo" sin que aparezca un error HTTP 401/403 (el fallo por falta
+      de camara al final es normal, ver paso 6).
+  [ ] Pruebas del backend: dentro de backend/, "php artisan test" — deben
+      pasar (necesita la base facelog_testing del paso 3).
+  [ ] Pruebas de recognition-app: dentro de recognition-app/, con el venv
+      activado, "python -m pytest tests/ -q" — deben pasar.
+  [ ] (Si configuraste Apache) subir una foto de enrolamiento desde el
+      panel funciona sin error 500.
+
+Si algo de esto falla, revisar docs/05-manual.md seccion 9 (problemas
+comunes) antes de seguir.
+
+Una vez que todo esto funciona, la instalacion quedo lista. Para el uso
+diario del proyecto, ver el archivo COMO_LEVANTAR_EL_PROYECTO.txt.
