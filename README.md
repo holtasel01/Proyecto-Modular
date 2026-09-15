@@ -10,6 +10,7 @@ Sistema de asistencia y horas de servicio social para un laboratorio universitar
 - Pruebas (Etapa 9): [docs/04-pruebas.md](docs/04-pruebas.md)
 - [Manual técnico (Etapa 10)](docs/05-manual.md) — arquitectura, base de datos, API, reconocimiento facial y mantenimiento
 - [Instalación y ejecución](docs/06-instalacion.md) — guía completa paso a paso (instalar de cero + operación día a día); también como texto plano en [INSTALACION.txt](INSTALACION.txt) / [COMO_LEVANTAR_EL_PROYECTO.txt](COMO_LEVANTAR_EL_PROYECTO.txt)
+- [Interfaz visual del laboratorio (Etapa adicional)](docs/07-interfaz-laboratorio.md) — ventana con el video de la cámara y retroalimentación en pantalla para el estudiante (antes solo existía por consola)
 
 ## Credenciales de prueba (seed)
 
@@ -138,15 +139,16 @@ python src\main.py
 
 `pip install` ahora sí instala las dependencias de visión artificial (DeepFace, OpenCV, MediaPipe, TensorFlow) — son ~1 GB entre todas, tenlo en cuenta la primera vez. El primer uso real (`compute_embedding.py` o `main.py`) también descarga los pesos del modelo Facenet512 (~95 MB) a `~/.deepface/weights/`.
 
-Para correr las pruebas: `venv\Scripts\python.exe -m pytest tests/ -q` (14 pruebas, ~30s por la carga de TensorFlow).
+Para correr las pruebas: `venv\Scripts\python.exe -m pytest tests/ -q` (18 pruebas, ~1 min por la carga de TensorFlow).
 
-### Qué hace `recognition-app` hoy (Etapa 5)
+### Qué hace `recognition-app` hoy (Etapa 5 + etapa adicional de interfaz)
 
 - `src/recognition/embedding.py`: detección + embedding facial real con DeepFace (modelo Facenet512, detector OpenCV).
 - `src/recognition/matcher.py` + `similarity.py`: compara un embedding contra el catálogo sincronizado (similitud coseno).
 - `src/liveness/blink.py`: liveness básico por detección de parpadeo (Eye Aspect Ratio con MediaPipe FaceMesh) — bloquea fotos/pantallas estáticas, no un video en reproducción (limitación documentada, `docs/02-diseno.md` §11).
 - `src/capture/camera.py`, `src/api_client/client.py`, `src/sync/catalog.py` (con caché en disco y fallback sin conexión), `src/queue/outbox.py` (cola SQLite para reintentos offline).
-- `src/main.py`: loop de reconocimiento en vivo completo (captura → liveness → embedding → comparación → anti-duplicado → reporte a la API o cola local).
+- `src/ui/feedback.py` (**nuevo**, etapa adicional): ventana con el video de la cámara y un mensaje superpuesto ("Bienvenido, ...", "No reconocido", etc.) — antes la única retroalimentación era texto en la consola. Ver [docs/07-interfaz-laboratorio.md](docs/07-interfaz-laboratorio.md).
+- `src/main.py`: loop de reconocimiento en vivo completo (captura → liveness → embedding → comparación → anti-duplicado → reporte a la API o cola local → ventana con el resultado).
 - `scripts/compute_embedding.py`: ya no es un placeholder — usa el DeepFace real.
 
 ### ⚠️→✅ Limitación de Windows con `php artisan serve` + enrolamiento (resuelta)
@@ -167,14 +169,14 @@ El vhost queda en `C:\xampp\apache\conf\extra\httpd-vhosts.conf` (bloque `Listen
 
 Se conectó y probó el flujo completo **Python → Laravel → PostgreSQL → Web** con datos reales circulando por cada componente real (no solo curl aislado por endpoint como en la Etapa 4):
 
-1. Se sembró un estudiante con un **embedding sintético** (un vector de 512 números, del mismo tamaño que produce Facenet512, pero que no corresponde a ningún rostro real — sigue faltando una foto real, Etapa 1 decisión 3) y un device con su token.
+1. Se sembró un estudiante con un **embedding sintético** (un vector de 512 números, del mismo tamaño que produce Facenet512, pero que no corresponde a ningún rostro real — suficiente para probar el flujo de datos de esta etapa) y un device con su token. La validación con una fotografía real de una persona se hizo por separado, ver Etapa 5 en "Estado actual".
 2. `recognition-app/tests/test_integration_live.py` (prueba permanente, se salta sola si no hay backend corriendo) usa el **`ApiClient` y `matcher` reales** de `recognition-app` — no curl, no mocks — para: sincronizar el catálogo real desde Laravel, encontrar la mejor coincidencia, reportar un evento de entrada, reportar un segundo evento (debe ignorarse como duplicado), y confirmar que una falla de red se distingue de un rechazo del servidor.
 3. Se simuló también la salida (segundo evento tras la ventana anti-duplicado) y el comando programado `attendance:close-stale-sessions`, y se verificó visualmente en el frontend (Playwright) que el estudiante aparece y desaparece de "en el laboratorio ahora mismo" y que su sesión queda con la duración correcta en el listado — cerrando el ciclo hasta la pantalla.
 4. Se probó también el flujo de incidencias (crear vía `CloseStaleSessions`, resolver desde la UI) de punta a punta.
 
 **Bug real encontrado y corregido en esta etapa** (no cosmético — afectaba toda salida y toda corrección manual): Carbon 3 (la librería de fechas que trae Laravel 11) cambió `diffInMinutes()` para devolver un `float` en vez de un `int`. Como `attendance_sessions.duration_minutes` es una columna `integer` de PostgreSQL, cualquier cierre de sesión con una duración no exacta en minutos (es decir, casi siempre) fallaba con un `QueryException` de PostgreSQL. No se detectó antes porque las pruebas de la Etapa 4 no habían llegado a cerrar una sesión real con el tiempo suficiente para producir una fracción de minuto. Corregido en `AttendanceService::closeSession()` y `AttendanceSessionController::update()` — ver `docs/02-diseno.md` §4.
 
-**Lo que sigue pendiente de la Etapa 5** (no se resolvió en esta etapa, sigue igual): una foto real para el "camino feliz" del reconocimiento, y configurar Apache para que el enrolamiento vía web funcione en una demo en vivo (la limitación de `artisan serve` descrita arriba **no afecta** el flujo de asistencia — ese usa solo llamadas HTTP normales de Python a Laravel, sin subprocesos — así que la integración de la Etapa 7 no dependía de resolverlo).
+**Actualización posterior**: tanto la foto real como Apache, mencionados como pendientes en versiones anteriores de este README, ya se resolvieron — ver la Etapa 5 más abajo en "Estado actual" y [docs/07-interfaz-laboratorio.md](docs/07-interfaz-laboratorio.md) para la etapa adicional de interfaz visual.
 
 ## Estado actual
 
@@ -182,11 +184,12 @@ Se conectó y probó el flujo completo **Python → Laravel → PostgreSQL → W
 - ✅ Etapa 2 — Diseño (aprobado)
 - ✅ Etapa 3 — Configuración: los tres proyectos están creados, instalados, con la base de datos `facelog` creada y migrada, y se comunican mínimamente (Python ↔ Laravel vía `/up` verificado).
 - ✅ Etapa 4 — Backend: modelos, migraciones del dominio, Policies, servicios de negocio (`AttendanceService`, `IncidentService`, `AuditLogger`, `FaceEmbeddingComputer`), controladores y API completa, probados manualmente de punta a punta.
-- 🔶 Etapa 5 — Reconocimiento facial: implementado y probado (14 pruebas automatizadas: detección de "sin rostro", contrato de `compute_embedding.py`, comparación de embeddings, cola offline, caché del catálogo). La limitación de Windows con `artisan serve` ya se resolvió con Apache (ver arriba). **Sigue pendiente**: una foto real de una persona para probar el "camino feliz" (detección + reconocimiento exitoso) — no hay dataset todavía (Etapa 1, decisión 3).
+- ✅ Etapa 5 — Reconocimiento facial: implementado y probado (18 pruebas automatizadas: detección real de rostro, contrato de `compute_embedding.py`, comparación de embeddings, cola offline, caché del catálogo, overlay visual). La limitación de Windows con `artisan serve` se resolvió con Apache. Validado de punta a punta con una fotografía real de una persona (enrolamiento vía API, sincronización, reconocimiento con confianza ≈1.0, registro de asistencia) — ya no queda ninguna brecha con datos sintéticos.
+- ✅ Etapa adicional — Interfaz visual del laboratorio: ventana con el video de la cámara y retroalimentación en pantalla para el estudiante ("Bienvenido, ...", "No reconocido", etc., con OpenCV — sin agregar dependencias nuevas). Antes solo existía por consola. Ver [docs/07-interfaz-laboratorio.md](docs/07-interfaz-laboratorio.md).
 - ✅ Etapa 6 — Plataforma web: SPA completa (estudiante + administrador), verificada en un navegador real de punta a punta contra el backend real.
 - ✅ Etapa 7 — Integración: flujo completo Python↔Laravel↔PostgreSQL↔Web verificado con datos reales circulando (embedding sintético, ver arriba); encontrado y corregido un bug real de cálculo de duración.
 - ✅ Etapa 8 — Seguridad: auditoría completa (ver [docs/03-seguridad.md](docs/03-seguridad.md)). **Hallazgo real corregido**: la API entera no tenía rate limiting (Laravel 11 dejó de registrarlo por defecto) — se agregó y se verificó en vivo (5 intentos de login, el 6º ya da 429). Cobertura de Policies auditada endpoint por endpoint.
 - ✅ Etapa 9 — Pruebas: 59 pruebas de PHPUnit (backend, contra PostgreSQL real) + 14 de pytest (recognition-app) + 1 de integración en vivo opcional — ver [docs/04-pruebas.md](docs/04-pruebas.md). **Otro hallazgo real corregido**: escribir la prueba de "un usuario no puede acceder a las rutas del device" reveló que sí podía (ver `docs/03-seguridad.md` §0) — corregido de inmediato con `EnsureDevicePrincipal`.
 - ✅ Etapa 10 — Documentación final: [docs/05-manual.md](docs/05-manual.md) reúne instalación, configuración, arquitectura, base de datos, funcionamiento, API, reconocimiento facial, pruebas y mantenimiento en un solo documento.
 
-**Con esto, Facelog tiene un prototipo funcional de punta a punta**, con una sola pieza explícitamente pendiente (no se da por resuelta para no fabricar una demo falsa): una foto real de una persona para validar el reconocimiento — Apache ya quedó configurado y verificado (`docs/05-manual.md` §9).
+**Con esto, Facelog tiene un prototipo funcional de punta a punta**, con las diez etapas originales completas y validadas con datos reales, más una etapa adicional (interfaz visual del laboratorio) agregada después a pedido explícito. No queda ninguna brecha de cobertura conocida.

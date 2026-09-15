@@ -200,7 +200,7 @@ todavia no existe. Se genera asi:
   3. Copiar el token que aparece (solo se muestra una vez).
   4. Pegarlo en recognition-app\.env como: DEVICE_TOKEN=el-token-copiado
 
-Para verificar la instalacion (no hace falta camara todavia):
+Para verificar la instalacion:
 
   python src\main.py
 
@@ -209,12 +209,24 @@ Si el DEVICE_TOKEN es invalido, falla de inmediato con un error HTTP
 problema real, revisar el token.
 
 Si el DEVICE_TOKEN es valido, imprime la linea
-"Facelog recognition-app - reconocimiento en vivo. Ctrl+C para salir."
-y luego intenta abrir la camara. Si la maquina no tiene camara conectada,
-en ese punto se cae con un traceback de Python ("No se pudo abrir la
-camara...") — eso es normal y NO significa que la instalacion este mal;
-simplemente confirma que ya paso la validacion del token. Detener con
-Ctrl+C (o dejar que termine solo por el error de camara).
+"Facelog recognition-app - reconocimiento en vivo. 'q'/Esc o Ctrl+C
+para salir." y luego intenta abrir la camara.
+
+  - CON camara conectada: se abre una ventana ("Facelog - Laboratorio")
+    con el video en vivo. Cada pocos segundos aparece, en una barra en
+    la parte inferior, el resultado del ultimo intento de reconocimiento
+    ("No reconocido", "Bienvenido, <matricula>", etc. — no hace falta
+    tener a nadie enrolado todavia para ver la ventana funcionando).
+    Cerrar con la tecla "q", Esc, o Ctrl+C en la terminal.
+
+  - SIN camara conectada: se cae con un traceback de Python ("No se
+    pudo abrir la camara...") antes de llegar a abrir la ventana — eso
+    es normal y NO significa que la instalacion este mal; simplemente
+    confirma que ya paso la validacion del token. Detener con Ctrl+C si
+    no termina solo.
+
+Mas detalle sobre la ventana (que mensaje aparece en cada caso, y por
+que se eligio asi) en docs/07-interfaz-laboratorio.md.
 
 
 -----------------------------------------
@@ -274,7 +286,8 @@ Antes de dar la instalacion por terminada, confirmar cada punto:
       token.
   [ ] recognition-app: "python src\main.py" llega al mensaje "reconocimiento
       en vivo" sin que aparezca un error HTTP 401/403 (el fallo por falta
-      de camara al final es normal, ver paso 6).
+      de camara al final es normal, ver paso 6). Si hay camara conectada,
+      ademas debe abrirse la ventana "Facelog - Laboratorio" con el video.
   [ ] Pruebas del backend: dentro de backend/, "php artisan test" — deben
       pasar (necesita la base facelog_testing del paso 3).
   [ ] Pruebas de recognition-app: dentro de recognition-app/, con el venv

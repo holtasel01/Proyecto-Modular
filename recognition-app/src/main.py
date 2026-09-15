@@ -11,6 +11,10 @@ Flujo por cada "ventana" de reconocimiento (cada RECOGNITION_WINDOW_SECONDS):
 4. exige que durante la ventana se haya detectado un parpadeo (liveness);
 5. aplica el umbral de confianza y la ventana anti-duplicado local (RF3/RF4);
 6. si todo pasa, reporta el evento a Laravel — o lo encola si no hay red.
+
+Además, muestra una ventana con el video de la cámara y el resultado de cada
+intento de reconocimiento superpuesto (RF6, etapa adicional — interfaz del
+laboratorio, ver docs/07-interfaz-laboratorio.md). Cerrar con 'q'/Esc o Ctrl+C.
 """
 
 from __future__ import annotations
@@ -18,6 +22,8 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
+
+import cv2
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -33,8 +39,10 @@ from src.recognition.embedding import (
 )
 from src.recognition.matcher import best_match
 from src.sync.catalog import FaceCatalog
+from src.ui.feedback import FeedbackOverlay
 
 RECOGNITION_WINDOW_SECONDS = 3.0
+WINDOW_TITLE = "Facelog - Laboratorio"
 
 
 def flush_outbox(api: ApiClient, outbox: Outbox) -> None:
@@ -57,6 +65,7 @@ def handle_recognition_attempt(
     outbox: Outbox,
     api: ApiClient,
     last_sent_at: dict[int, float],
+    feedback: FeedbackOverlay,
 ) -> None:
     try:
         result = compute_embedding(frame)
@@ -64,15 +73,18 @@ def handle_recognition_attempt(
         return  # nadie frente a la cámara en este momento; no es un error
     except MultipleFacesDetectedError:
         print("Varios rostros detectados a la vez; se ignora este intento.")
+        feedback.set("Solo una persona a la vez frente a la cámara", level="warn")
         return
 
     if not blinked:
         print("No se detectó parpadeo (liveness); se ignora este intento.")
+        feedback.set("No se detectó parpadeo, inténtalo de nuevo", level="warn")
         return
 
     match = best_match(result["embedding"], catalog.entries())
     if match is None or match["confidence"] < config.min_confidence_reject:
         print("No reconocido.")
+        feedback.set("No reconocido", level="bad")
         return
 
     student_id = match["student_id"]
@@ -84,11 +96,18 @@ def handle_recognition_attempt(
 
     try:
         response = api.post_attendance_event(student_id, match["confidence"])
+        event_type = response.get("event", {}).get("type")
+        if event_type == "exit":
+            feedback.set(f"Hasta luego, {match['matricula']}", level="good")
+        else:
+            feedback.set(f"Bienvenido, {match['matricula']}", level="good")
         print(f"{match['matricula']}: {response.get('status')}")
     except ApiConnectionError:
         outbox.enqueue(student_id, match["confidence"])
+        feedback.set(f"{match['matricula']}: sin conexión, guardado para reintentar", level="warn")
         print(f"{match['matricula']}: sin conexión, evento encolado para reintento")
     except ApiRejectedError as exc:
+        feedback.set(f"{match['matricula']}: evento rechazado por el servidor", level="bad")
         print(f"{match['matricula']}: el backend rechazó el evento ({exc})")
 
 
@@ -108,28 +127,39 @@ def main() -> int:
 
     last_sent_at: dict[int, float] = {}
     blink_detector = BlinkDetector()
+    feedback = FeedbackOverlay()
 
-    print("Facelog recognition-app — reconocimiento en vivo. Ctrl+C para salir.")
+    print("Facelog recognition-app — reconocimiento en vivo. 'q'/Esc o Ctrl+C para salir.")
 
     with Camera(config.camera_index) as camera:
         window_start = time.time()
 
-        while True:
-            frame = camera.read()
-            if frame is None:
-                time.sleep(0.1)
-                continue
+        try:
+            while True:
+                frame = camera.read()
+                if frame is None:
+                    time.sleep(0.1)
+                    continue
 
-            blinked = blink_detector.process_frame(frame)
+                blinked = blink_detector.process_frame(frame)
 
-            catalog.refresh_if_needed()
+                catalog.refresh_if_needed()
 
-            now = time.time()
-            if now - window_start >= RECOGNITION_WINDOW_SECONDS:
-                flush_outbox(api, outbox)
-                handle_recognition_attempt(frame, catalog, blinked, config, outbox, api, last_sent_at)
-                blink_detector.reset()
-                window_start = now
+                now = time.time()
+                if now - window_start >= RECOGNITION_WINDOW_SECONDS:
+                    flush_outbox(api, outbox)
+                    handle_recognition_attempt(
+                        frame, catalog, blinked, config, outbox, api, last_sent_at, feedback
+                    )
+                    blink_detector.reset()
+                    window_start = now
+
+                cv2.imshow(WINDOW_TITLE, feedback.draw(frame))
+                key = cv2.waitKey(1) & 0xFF
+                if key in (ord("q"), 27):  # 27 = Esc
+                    break
+        finally:
+            cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

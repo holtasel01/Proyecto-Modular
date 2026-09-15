@@ -150,8 +150,8 @@ Diagrama entidad-relación completo y el porqué de cada decisión (por ejemplo,
 
 **Consulta**: el estudiante ve sus horas acumuladas y su historial; el admin ve quién está en el laboratorio ahora mismo, corrige registros cuando hace falta (siempre auditado) y resuelve incidencias.
 
-**Estado actual de esto en la práctica** (transparencia, no todo está probado con datos 100% reales todavía):
-- El flujo completo (Python → Laravel → PostgreSQL → Web) está verificado de punta a punta, pero con un embedding **sintético** para la parte de reconocimiento — falta una foto real de una persona (Etapa 1, decisión pendiente del usuario) para validar el "camino feliz" de reconocimiento real.
+**Estado actual de esto en la práctica** (transparencia):
+- El flujo completo (Python → Laravel → PostgreSQL → Web) está verificado de punta a punta con una fotografía real de una persona (enrolamiento, sincronización, reconocimiento, registro de asistencia) — ya no depende solo de un embedding sintético.
 - El enrolamiento vía web necesita que Laravel corra detrás de Apache, no `php artisan serve`, por una limitación de Windows (`docs/02-diseno.md` §1) — **ya configurado y verificado** (vhost en el puerto 8088, ver §9).
 
 ---
@@ -187,7 +187,11 @@ Pipeline (`recognition-app/src/recognition/`): detección + embedding con **Deep
 
 Por qué estas alternativas y no otras (dlib, InsightFace, modelos de anti-spoofing dedicados): `docs/02-diseno.md` §11.
 
-**Limitaciones documentadas a propósito** (no ocultas): el liveness por parpadeo bloquea una foto o pantalla estática, no un video en reproducción. No hay todavía una foto real de una persona para validar la precisión del reconocimiento en este entorno — el pipeline está probado con una imagen sintética "sin rostro" (para el camino de error) y con un embedding sintético (para el flujo de datos, Etapa 7), pero no con una cara real todavía.
+**Limitación documentada a propósito** (no oculta): el liveness por parpadeo bloquea una foto o pantalla estática, no un video en reproducción.
+
+**Validado con una fotografía real** (2026-09-12): enrolamiento vía API de producción (Apache), embedding real de 512 dimensiones persistido y archivo temporal confirmado eliminado, sincronización de catálogo, reconocimiento con confianza ≈1.0 contra la propia foto y ≈0.026 contra un embedding distinto, y registro de asistencia con esa confianza real. Ya no queda ningún camino probado únicamente con datos sintéticos.
+
+**Interfaz visual** (etapa adicional, ver `docs/07-interfaz-laboratorio.md`): `main.py` ya no es solo consola — abre una ventana (`cv2.imshow`) con el video de la cámara y una barra inferior con el resultado de cada intento de reconocimiento ("Bienvenido, `<matrícula>`", "No reconocido", etc.), usando la matrícula porque el catálogo sincronizado nunca incluyó el nombre. Se cierra con `q`/`Esc` o `Ctrl+C`.
 
 ---
 
@@ -200,7 +204,7 @@ cd backend && php artisan test          # 59 pruebas
 
 # recognition-app:
 cd recognition-app
-venv\Scripts\python.exe -m pytest tests/ -q   # 14 pruebas (~30s por TensorFlow)
+venv\Scripts\python.exe -m pytest tests/ -q   # 18 pruebas (~1 min por TensorFlow)
 ```
 
 Qué cubre cada archivo, y las trampas no obvias de probar Laravel+Sanctum que costó tiempo resolver: `docs/04-pruebas.md`.
@@ -237,4 +241,4 @@ Qué cubre cada archivo, y las trampas no obvias de probar Laravel+Sanctum que c
 
 **Apache para el enrolamiento en vivo — ya configurado**: vhost en `C:\xampp\apache\conf\extra\httpd-vhosts.conf` (`Listen 8088` + `VirtualHost *:8088` → `backend/public`), elegido tras verificar qué puertos estaban libres antes de tocar nada (había otro servicio ya corriendo en el 8080, sin relación con Facelog, que no se tocó). Se arranca con `C:\xampp\apache_start.bat`; el frontend debe apuntar `VITE_API_BASE_URL` a `http://localhost:8088` para usarlo en vez de `artisan serve`. Verificado subiendo una foto real de punta a punta.
 
-**Para retomar el trabajo pendiente** (lo único que sigue sin resolver, no inventar que sí): conseguir una foto real de una persona para probar el "camino feliz" del reconocimiento — todo lo probado hasta ahora usó datos sintéticos para el reconocimiento en sí (Etapa 1, decisión 3, sigue en pie).
+**Estado**: las diez etapas originales están completas y validadas con datos reales (incluida una fotografía real de una persona, §7), más una etapa adicional posterior (`docs/07-interfaz-laboratorio.md`) que agregó la ventana visual de `recognition-app`. No hay ningún gap de cobertura conocido pendiente.

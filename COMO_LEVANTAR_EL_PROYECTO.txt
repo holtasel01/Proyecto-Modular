@@ -66,7 +66,14 @@ Requiere que ya exista un DEVICE_TOKEN valido en recognition-app\.env
 (se genera una sola vez desde el panel admin -> Dispositivos — ver
 INSTALACION.txt seccion 6 si todavia no lo hiciste).
 
-Detener con Ctrl+C.
+Si hay una camara conectada, se abre una ventana ("Facelog - Laboratorio")
+con el video en vivo. Cada pocos segundos aparece, en una barra en la
+parte inferior, el resultado del ultimo intento de reconocimiento
+("Bienvenido, <matricula>", "No reconocido", etc. — ver el detalle
+completo de mensajes en docs/07-interfaz-laboratorio.md).
+
+Detener con la tecla "q" o Esc (con la ventana enfocada), o con Ctrl+C
+en la terminal.
 
 
 -----------------------------------------
@@ -97,7 +104,7 @@ Para detener Apache: C:\xampp\apache_stop.bat
 -----------------------------------------
   - Backend (artisan serve):  Ctrl+C en su terminal.
   - Frontend (npm run dev):   Ctrl+C en su terminal.
-  - recognition-app:          Ctrl+C en su terminal.
+  - recognition-app:          tecla "q"/Esc en la ventana, o Ctrl+C en su terminal.
   - Apache (si lo usaste):    C:\xampp\apache_stop.bat
 
 

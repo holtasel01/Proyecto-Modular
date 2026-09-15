@@ -1,6 +1,8 @@
 # Facelog — Etapa 9: Pruebas
 
 > Backend: 59 pruebas de PHPUnit (`backend/tests/Feature/`) contra una base de datos PostgreSQL real y separada (no sqlite — ver §1). `recognition-app`: 14 pruebas de pytest más una de integración en vivo opcional (Etapa 5/7). No se listan todas las pruebas una por una aquí; este documento explica **cómo correrlas, qué cubren, y las trampas no obvias que aparecieron al escribirlas** — varias de las cuales revelaron bugs reales, no solo confirmaron que el código ya andaba bien.
+>
+> **Actualización (etapa adicional, posterior)**: `docs/07-interfaz-laboratorio.md` agregó 4 pruebas más (`tests/test_feedback_overlay.py`), llevando `recognition-app` a 18 pruebas de pytest en total. El resto de este documento describe el estado al cierre de la Etapa 9 y sigue siendo válido para esas 14 + 59.
 
 ---
 

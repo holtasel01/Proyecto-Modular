@@ -194,15 +194,18 @@ copy config.example.env .env
 2. Copiar el token que aparece (solo se muestra una vez).
 3. Pegarlo en `recognition-app/.env` como `DEVICE_TOKEN=...`.
 
-**Verificar la instalación** (no requiere cámara todavía):
+**Verificar la instalación:**
 
 ```bash
 python src\main.py
 ```
 
-Debe imprimir algo como `OK: backend disponible en http://localhost:8000/up` si el `DEVICE_TOKEN` es válido, y luego intentar abrir la cámara (si no hay cámara conectada, es normal que falle ahí — eso no es parte de "la instalación funcionó", ver §8).
+Si el `DEVICE_TOKEN` es inválido, falla de inmediato con un error HTTP 401/403 al sincronizar el catálogo — eso sí es un problema real, revisar el token.
 
-Detener con `Ctrl+C`.
+Si es válido, imprime `Facelog recognition-app - reconocimiento en vivo. 'q'/Esc o Ctrl+C para salir.` y luego intenta abrir la cámara:
+
+- **Con cámara conectada**: se abre una ventana ("Facelog - Laboratorio") con el video en vivo y, en una barra inferior, el resultado del último intento de reconocimiento ("No reconocido", "Bienvenido, `<matrícula>`", etc. — detalle completo en [docs/07-interfaz-laboratorio.md](07-interfaz-laboratorio.md)). Cerrar con `q`, `Esc`, o `Ctrl+C` en la terminal.
+- **Sin cámara conectada**: se cae con un traceback de Python ("No se pudo abrir la cámara...") antes de llegar a abrir la ventana — es normal y no significa que la instalación esté mal; solo confirma que ya pasó la validación del token (ver §8).
 
 ---
 
@@ -239,7 +242,7 @@ Con esto, subir una foto de enrolamiento desde el panel del estudiante/admin ya 
 - [ ] `http://localhost:5173` muestra el login y puedes entrar como `admin@facelog.test`.
 - [ ] Puedes crear un estudiante desde **Estudiantes → Nuevo estudiante**.
 - [ ] Puedes crear un dispositivo desde **Dispositivos** y copiar su token.
-- [ ] `recognition-app`: `python src\main.py` conecta con el backend sin error de token.
+- [ ] `recognition-app`: `python src\main.py` llega al mensaje "reconocimiento en vivo" sin error HTTP 401/403 (el fallo por falta de cámara al final es normal, ver §6). Con cámara conectada, además debe abrirse la ventana "Facelog - Laboratorio".
 - [ ] Pruebas del backend: `cd backend && php artisan test` → deben pasar (necesita la base `facelog_testing` del paso 3).
 - [ ] Pruebas de `recognition-app`: `venv\Scripts\python.exe -m pytest tests/ -q` → deben pasar.
 - [ ] (Si configuraste Apache, §7) subir una foto de enrolamiento desde el panel funciona sin error 500.
@@ -264,4 +267,4 @@ cd frontend && npm run dev
 cd recognition-app && venv\Scripts\activate && python src\main.py
 ```
 
-Para detener: `Ctrl+C` en cada terminal (Apache: `C:\xampp\apache_stop.bat` o el botón "Stop" del panel de XAMPP).
+Para detener: `Ctrl+C` en cada terminal (`recognition-app` también se puede cerrar con `q`/`Esc` sobre su ventana; Apache: `C:\xampp\apache_stop.bat` o el botón "Stop" del panel de XAMPP).
