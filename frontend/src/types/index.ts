@@ -93,3 +93,52 @@ export interface Paginated<T> {
     total: number;
   };
 }
+
+export type ClusterLabel = "baja actividad" | "actividad moderada" | "alta actividad";
+
+export interface StudentClusterFeatures {
+  horasAcumuladas: number;
+  numeroSesiones: number;
+  duracionPromedioSesionMin: number;
+  horasPromedioSemana: number;
+  sesionesPromedioSemana: number;
+  variabilidadSemanal: number;
+}
+
+export interface StudentCluster {
+  studentId: number;
+  matricula: string;
+  nombre: string;
+  cluster: number;
+  clusterLabel: ClusterLabel;
+  features: StudentClusterFeatures;
+}
+
+export interface ClusterCentroid extends StudentClusterFeatures {
+  cluster: number;
+  clusterLabel: ClusterLabel;
+}
+
+export interface StudentClusterResult {
+  clusters: StudentCluster[];
+  centroids: ClusterCentroid[];
+}
+
+export interface StudentPrediction {
+  tieneDatos: boolean;
+  horasAcumuladas: number;
+  horasMeta: number;
+  horasRestantes: number;
+  progresoPorcentaje: number;
+  metaCumplida: boolean;
+  numeroSesiones: number;
+  duracionPromedioSesionMin: number | null;
+  horasPromedioSemana: number | null;
+  horasPromedioDia: number | null;
+  sesionesPromedioSemana: number | null;
+  variabilidadSemanal: number | null;
+  semanasRestantesEstimadas: number | null;
+  diasRestantesEstimados: number | null;
+  sesionesRestantesEstimadas: number | null;
+  fechaEstimadaFinalizacion: string | null;
+}

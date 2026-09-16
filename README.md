@@ -11,16 +11,33 @@ Sistema de asistencia y horas de servicio social para un laboratorio universitar
 - [Manual técnico (Etapa 10)](docs/05-manual.md) — arquitectura, base de datos, API, reconocimiento facial y mantenimiento
 - [Instalación y ejecución](docs/06-instalacion.md) — guía completa paso a paso (instalar de cero + operación día a día); también como texto plano en [INSTALACION.txt](INSTALACION.txt) / [COMO_LEVANTAR_EL_PROYECTO.txt](COMO_LEVANTAR_EL_PROYECTO.txt)
 - [Interfaz visual del laboratorio (Etapa adicional)](docs/07-interfaz-laboratorio.md) — ventana con el video de la cámara y retroalimentación en pantalla para el estudiante (antes solo existía por consola)
+- [Minería de datos: agrupamiento K-Means (Etapa adicional)](docs/08-mineria-datos.md) — agrupa estudiantes por patrón de asistencia (baja/media/alta actividad) usando K-Means real con scikit-learn
+- [Ventana de predicción del estudiante (Etapa adicional)](docs/09-prediccion-estudiante.md) — cada estudiante ve su ritmo actual y una fecha estimada para completar sus 480 horas
 
 ## Credenciales de prueba (seed)
 
 Tras `php artisan migrate:fresh --seed`:
 
-| Usuario | Email | Password | Rol |
+| Usuario | Código / Email | Password | Rol |
 |---|---|---|---|
 | Administrador | `admin@facelog.test` | `password` | `admin` |
+| Estudiante de prueba | `218900001` o `estudiante@facelog.test` | `password` | `student` |
 
-Junto con el usuario admin, el seeder crea los `settings` por defecto (umbrales de confianza, ventana anti-duplicado, horas de sesión máximas, meta de horas por defecto — ver `docs/02-diseno.md` §5 y §9).
+El estudiante de prueba ya viene con su cuenta vinculada (no hace falta registrarlo) — el login acepta tanto su matrícula como su correo, indistintamente.
+
+Junto con estos dos usuarios, el seeder crea los `settings` por defecto (umbrales de confianza, ventana anti-duplicado, horas de sesión máximas, meta de horas por defecto — ver `docs/02-diseno.md` §5 y §9).
+
+### Autoregistro de estudiantes
+
+Un estudiante nuevo (que el admin ya dio de alta con su matrícula, pero que todavía no tiene cuenta) puede crear su propia cuenta desde `/registro` en el frontend, con tres datos: **código de estudiante** (la matrícula que le dio el admin), **correo** (institucional o no) y **contraseña**. El login (`/login`) acepta después tanto la matrícula como el correo, junto con la contraseña.
+
+```bash
+# vía API, ejemplo con curl (requiere el flujo de cookie CSRF de Sanctum, igual que /login):
+POST /api/register
+{"matricula": "218999001", "email": "alumno@correo.com", "password": "una-contraseña-de-8+"}
+```
+
+Si la matrícula no existe todavía en `students` (el admin no lo ha dado de alta), o si ya tiene una cuenta asociada, el registro se rechaza con un mensaje claro (404 o 409 respectivamente) — ver `app/Http/Controllers/Api/AuthController.php`.
 
 ## Estructura del proyecto
 
@@ -165,6 +182,8 @@ C:\xampp\apache_start.bat
 
 El vhost queda en `C:\xampp\apache\conf\extra\httpd-vhosts.conf` (bloque `Listen 8088` + `VirtualHost *:8088` apuntando a `backend/public`) — persiste entre reinicios de Apache, no hace falta repetir esta configuración.
 
+**El mismo problema apareció de nuevo con la etapa adicional de minería de datos** (`docs/08-mineria-datos.md`): `compute_clusters.py` también falla bajo `artisan serve` por la misma razón (scikit-learn/joblib también terminan importando `asyncio` de forma transitoria). Se confirmó y se resuelve exactamente igual — sirviendo el backend con el mismo Apache de arriba, sin configuración adicional.
+
 ## 5. Integración (Etapa 7)
 
 Se conectó y probó el flujo completo **Python → Laravel → PostgreSQL → Web** con datos reales circulando por cada componente real (no solo curl aislado por endpoint como en la Etapa 4):
@@ -186,6 +205,8 @@ Se conectó y probó el flujo completo **Python → Laravel → PostgreSQL → W
 - ✅ Etapa 4 — Backend: modelos, migraciones del dominio, Policies, servicios de negocio (`AttendanceService`, `IncidentService`, `AuditLogger`, `FaceEmbeddingComputer`), controladores y API completa, probados manualmente de punta a punta.
 - ✅ Etapa 5 — Reconocimiento facial: implementado y probado (18 pruebas automatizadas: detección real de rostro, contrato de `compute_embedding.py`, comparación de embeddings, cola offline, caché del catálogo, overlay visual). La limitación de Windows con `artisan serve` se resolvió con Apache. Validado de punta a punta con una fotografía real de una persona (enrolamiento vía API, sincronización, reconocimiento con confianza ≈1.0, registro de asistencia) — ya no queda ninguna brecha con datos sintéticos.
 - ✅ Etapa adicional — Interfaz visual del laboratorio: ventana con el video de la cámara y retroalimentación en pantalla para el estudiante ("Bienvenido, ...", "No reconocido", etc., con OpenCV — sin agregar dependencias nuevas). Antes solo existía por consola. Ver [docs/07-interfaz-laboratorio.md](docs/07-interfaz-laboratorio.md).
+- ✅ Etapa adicional — Minería de datos (K-Means): agrupa estudiantes activos por patrón de asistencia (baja/media/alta actividad) con scikit-learn real, invocado desde Laravel igual que el enrolamiento facial. Misma limitación de Windows con `artisan serve` (resuelta con el mismo Apache). Ver [docs/08-mineria-datos.md](docs/08-mineria-datos.md).
+- ✅ Etapa adicional — Predicción del estudiante: cada estudiante ve, en `/prediccion`, su ritmo de horas/semana, qué tan constante es, y una fecha estimada para completar sus 480 horas de meta. Reutiliza el mismo cálculo de patrón de asistencia que el agrupamiento K-Means. Ver [docs/09-prediccion-estudiante.md](docs/09-prediccion-estudiante.md).
 - ✅ Etapa 6 — Plataforma web: SPA completa (estudiante + administrador), verificada en un navegador real de punta a punta contra el backend real.
 - ✅ Etapa 7 — Integración: flujo completo Python↔Laravel↔PostgreSQL↔Web verificado con datos reales circulando (embedding sintético, ver arriba); encontrado y corregido un bug real de cálculo de duración.
 - ✅ Etapa 8 — Seguridad: auditoría completa (ver [docs/03-seguridad.md](docs/03-seguridad.md)). **Hallazgo real corregido**: la API entera no tenía rate limiting (Laravel 11 dejó de registrarlo por defecto) — se agregó y se verificó en vivo (5 intentos de login, el 6º ya da 429). Cobertura de Policies auditada endpoint por endpoint.

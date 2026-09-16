@@ -14,7 +14,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email'],
+            // matrícula del estudiante o correo — AuthController::resolveEmail() decide cuál es
+            'identifier' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }

@@ -1,5 +1,11 @@
 import { apiRequest } from "./client";
-import type { AttendanceSession, AttendanceSummary, LabStatusEntry, Paginated } from "../types";
+import type {
+  AttendanceSession,
+  AttendanceSummary,
+  LabStatusEntry,
+  Paginated,
+  StudentPrediction,
+} from "../types";
 
 export function myAttendance(): Promise<Paginated<AttendanceSession>> {
   return apiRequest<Paginated<AttendanceSession>>("/me/attendance");
@@ -7,6 +13,10 @@ export function myAttendance(): Promise<Paginated<AttendanceSession>> {
 
 export function mySummary(): Promise<AttendanceSummary> {
   return apiRequest<AttendanceSummary>("/me/summary");
+}
+
+export function myPrediction(): Promise<StudentPrediction> {
+  return apiRequest<StudentPrediction>("/me/prediction");
 }
 
 export interface SessionFilters {

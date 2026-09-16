@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -16,7 +17,21 @@ class LoginTest extends TestCase
         // Un login exitoso regenera la sesión — necesita el Referer para que
         // Sanctum la arranque, igual que en test_login_then_logout_ends_the_session.
         $response = $this->withHeader('Referer', 'http://localhost:5173/')->postJson('/api/login', [
-            'email' => 'estudiante@test.com',
+            'identifier' => 'estudiante@test.com',
+            'password' => 'secreto123',
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.id', $user->id);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_can_log_in_with_matricula_instead_of_email(): void
+    {
+        $user = User::factory()->create(['password' => bcrypt('secreto123')]);
+        Student::factory()->create(['matricula' => '218999999', 'user_id' => $user->id]);
+
+        $response = $this->withHeader('Referer', 'http://localhost:5173/')->postJson('/api/login', [
+            'identifier' => '218999999',
             'password' => 'secreto123',
         ]);
 
@@ -29,7 +44,7 @@ class LoginTest extends TestCase
         User::factory()->create(['email' => 'estudiante2@test.com', 'password' => bcrypt('secreto123')]);
 
         $response = $this->postJson('/api/login', [
-            'email' => 'estudiante2@test.com',
+            'identifier' => 'estudiante2@test.com',
             'password' => 'incorrecta',
         ]);
 
@@ -40,7 +55,7 @@ class LoginTest extends TestCase
     public function test_unknown_email_is_rejected_without_revealing_it_does_not_exist(): void
     {
         $response = $this->postJson('/api/login', [
-            'email' => 'nadie@test.com',
+            'identifier' => 'nadie@test.com',
             'password' => 'lo-que-sea',
         ]);
 
@@ -49,16 +64,38 @@ class LoginTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_unknown_matricula_is_rejected_with_the_same_generic_error(): void
+    {
+        $response = $this->postJson('/api/login', [
+            'identifier' => '999999999',
+            'password' => 'lo-que-sea',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_matricula_of_a_student_without_an_account_yet_is_rejected(): void
+    {
+        Student::factory()->create(['matricula' => '218888888', 'user_id' => null]);
+
+        $response = $this->postJson('/api/login', [
+            'identifier' => '218888888',
+            'password' => 'lo-que-sea',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
     public function test_login_is_throttled_after_five_attempts(): void
     {
         RateLimiter::clear('estudiante3@test.com|127.0.0.1');
 
         for ($i = 0; $i < 5; $i++) {
-            $this->postJson('/api/login', ['email' => 'estudiante3@test.com', 'password' => 'x'])
+            $this->postJson('/api/login', ['identifier' => 'estudiante3@test.com', 'password' => 'x'])
                 ->assertStatus(422);
         }
 
-        $this->postJson('/api/login', ['email' => 'estudiante3@test.com', 'password' => 'x'])
+        $this->postJson('/api/login', ['identifier' => 'estudiante3@test.com', 'password' => 'x'])
             ->assertStatus(429);
     }
 
@@ -73,7 +110,7 @@ class LoginTest extends TestCase
         $referer = ['Referer' => 'http://localhost:5173/'];
 
         $this->withHeaders($referer)
-            ->postJson('/api/login', ['email' => $user->email, 'password' => 'secreto123'])
+            ->postJson('/api/login', ['identifier' => $user->email, 'password' => 'secreto123'])
             ->assertOk();
 
         // Illuminate\Auth\RequestGuard cachea el usuario resuelto la primera

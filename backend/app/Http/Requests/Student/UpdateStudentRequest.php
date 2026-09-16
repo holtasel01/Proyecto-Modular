@@ -17,7 +17,8 @@ class UpdateStudentRequest extends FormRequest
         $student = $this->route('student');
 
         return [
-            'matricula' => ['sometimes', 'string', 'max:20', Rule::unique('students', 'matricula')->ignore($student)],
+            // Solo números — así son las matrículas de la UDG, no se aceptan letras.
+            'matricula' => ['sometimes', 'string', 'max:20', 'regex:/^\d+$/', Rule::unique('students', 'matricula')->ignore($student)],
             'nombre' => ['sometimes', 'string', 'max:150'],
             'carrera' => ['sometimes', 'nullable', 'string', 'max:100'],
             'horas_meta' => ['sometimes', 'integer', 'min:1'],

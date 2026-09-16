@@ -108,6 +108,11 @@ body {
   gap: 12px;
 }
 
+.auth-switch {
+  text-align: center;
+  margin-top: 4px;
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -279,6 +284,21 @@ button[type="button"]:not(:only-child) {
 .badge-resolved {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.badge-baja {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge-moderada {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge-alta {
+  background: #dcfce7;
+  color: #15803d;
 }
 
 .token-box {

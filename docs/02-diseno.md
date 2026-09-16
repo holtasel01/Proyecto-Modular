@@ -147,7 +147,7 @@ Convención: nombres de tabla en plural snake_case, PK `id` (bigint autoincremen
 |---|---|---|
 | id | bigint PK | |
 | user_id | bigint FK → users.id | nullable, unique (un estudiante puede existir antes de tener cuenta) |
-| matricula | varchar(20) | unique, not null |
+| matricula | varchar(20) | unique, not null — **solo dígitos** (las matrículas de la UDG no llevan letras); validado con `regex:/^\d+$/` en `StoreStudentRequest`/`UpdateStudentRequest`, no con un `CHECK` de base de datos (es una regla de formato de entrada, no un enum fijo como `estado`) |
 | nombre | varchar(150) | |
 | carrera | varchar(100) | nullable |
 | horas_meta | integer | default configurable (ver `settings`) |
@@ -283,9 +283,21 @@ Prefijo `/api`. Autenticación: cookies de sesión (Sanctum SPA) para `users`, o
 ### Autenticación (web)
 | Método | Ruta | Quién | Descripción |
 |---|---|---|---|
-| POST | `/login` | público | email+password → cookie de sesión |
+| POST | `/register` | público | matrícula+email+password → crea la cuenta de un estudiante ya dado de alta por el admin (§1.1) y deja la sesión iniciada |
+| POST | `/login` | público | `identifier` (matrícula o email) + password → cookie de sesión |
 | POST | `/logout` | autenticado | cierra sesión |
 | GET | `/me` | autenticado | perfil + rol del usuario actual |
+
+#### §1.1 Autoregistro de estudiantes (agregado tras el cierre de las 10 etapas originales)
+
+El estudiante siempre existe primero en `students` (dado de alta por el admin con su matrícula, §1) — `/register` solo crea la cuenta de acceso que lo vincula, usando la matrícula como "código de invitación":
+
+1. `POST /api/register {matricula, email, password}`.
+2. Si no existe ningún `Student` con esa matrícula → `404` (el admin todavía no lo dio de alta).
+3. Si ese `Student` ya tiene `user_id` (ya se registró antes) → `409 Conflict`.
+4. Si no, se crea el `User` (`role = student`), se enlaza `students.user_id`, y la sesión queda iniciada de inmediato (mismo mecanismo que `/login`).
+
+`/login` acepta el campo `identifier`, que puede ser el correo o la matrícula — si contiene `@` se trata como correo; si no, se busca el `Student` con esa matrícula y se usa el correo de su `User` vinculado. Si la matrícula no existe, o existe pero no tiene cuenta todavía, el login falla con el mismo `422` genérico que una contraseña incorrecta — no se revela cuál de los dos casos ocurrió (mismo principio de `docs/03-seguridad.md` ya aplicado a login por email).
 
 ### Estudiantes (admin, salvo indicado)
 | Método | Ruta | Quién | Descripción |

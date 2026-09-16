@@ -22,4 +22,22 @@ return [
 
     'embedding_timeout_seconds' => env('FACELOG_EMBEDDING_TIMEOUT_SECONDS', 30),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Minería de datos: agrupamiento de estudiantes por patrón de asistencia
+    |--------------------------------------------------------------------------
+    |
+    | Igual que el enrolamiento facial, Laravel arma los datos (aquí, vectores
+    | de características por estudiante) y se los pasa por stdin a un script
+    | de Python que hace el trabajo real (K-Means con scikit-learn).
+    |
+    */
+
+    'compute_clusters_script' => env(
+        'FACELOG_COMPUTE_CLUSTERS_SCRIPT',
+        base_path('../recognition-app/scripts/compute_clusters.py'),
+    ),
+
+    'clustering_timeout_seconds' => env('FACELOG_CLUSTERING_TIMEOUT_SECONDS', 30),
+
 ];

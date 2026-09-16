@@ -15,7 +15,8 @@ class StudentFactory extends Factory
     public function definition(): array
     {
         return [
-            'matricula' => strtoupper(fake()->unique()->bothify('??####')),
+            // Solo números, como las matrículas reales de la UDG (9 dígitos).
+            'matricula' => fake()->unique()->numerify('#########'),
             'nombre' => fake()->name(),
             'carrera' => fake()->randomElement(['ISC', 'IIS', 'LCC', null]),
             'horas_meta' => 480,

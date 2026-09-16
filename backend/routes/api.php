@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\IncidentController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\StudentClusterController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentFacePhotoController;
 use App\Http\Controllers\Api\SyncController;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 // Contrato completo en docs/02-diseno.md §5.
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:login');
 
 Route::middleware(['auth:sanctum', 'user-principal'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -22,6 +24,7 @@ Route::middleware(['auth:sanctum', 'user-principal'])->group(function () {
 
     Route::get('/me/attendance', [AttendanceSessionController::class, 'myAttendance']);
     Route::get('/me/summary', [AttendanceSessionController::class, 'mySummary']);
+    Route::get('/me/prediction', [AttendanceSessionController::class, 'myPrediction']);
 
     Route::apiResource('students', StudentController::class)->except(['destroy']);
     Route::get('/students/{student}/face-profile', [StudentFacePhotoController::class, 'show']);
@@ -36,6 +39,8 @@ Route::middleware(['auth:sanctum', 'user-principal'])->group(function () {
     Route::patch('/incidents/{incident}', [IncidentController::class, 'update']);
 
     Route::get('/audit-logs', [AuditLogController::class, 'index']);
+
+    Route::get('/analytics/student-clusters', [StudentClusterController::class, 'index']);
 
     Route::get('/settings', [SettingController::class, 'index']);
     Route::patch('/settings', [SettingController::class, 'update']);

@@ -13,16 +13,16 @@ class StudentManagementTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $response = $this->actingAs($admin)->postJson('/api/students', [
-            'matricula' => 'A001',
+            'matricula' => '100001',
             'nombre' => 'Estudiante de Prueba',
             'carrera' => 'ISC',
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('data.matricula', 'A001')
+            ->assertJsonPath('data.matricula', '100001')
             ->assertJsonPath('data.estado', 'activo'); // default de la BD, ver StudentController@store
 
-        $this->assertDatabaseHas('students', ['matricula' => 'A001']);
+        $this->assertDatabaseHas('students', ['matricula' => '100001']);
     }
 
     public function test_student_cannot_create_a_student(): void
@@ -30,7 +30,7 @@ class StudentManagementTest extends TestCase
         $studentUser = User::factory()->create();
 
         $this->actingAs($studentUser)->postJson('/api/students', [
-            'matricula' => 'A002',
+            'matricula' => '100002',
             'nombre' => 'No debería poder',
         ])->assertStatus(403);
     }
@@ -38,14 +38,14 @@ class StudentManagementTest extends TestCase
     public function test_admin_can_list_and_search_students(): void
     {
         $admin = User::factory()->admin()->create();
-        Student::factory()->create(['matricula' => 'B001', 'nombre' => 'Ana López']);
-        Student::factory()->create(['matricula' => 'B002', 'nombre' => 'Beto Ruiz']);
+        Student::factory()->create(['matricula' => '100011', 'nombre' => 'Ana López']);
+        Student::factory()->create(['matricula' => '100012', 'nombre' => 'Beto Ruiz']);
 
         $response = $this->actingAs($admin)->getJson('/api/students?search=Ana');
 
         $response->assertOk();
         $this->assertCount(1, $response->json('data'));
-        $this->assertSame('B001', $response->json('data.0.matricula'));
+        $this->assertSame('100011', $response->json('data.0.matricula'));
     }
 
     public function test_student_can_view_own_record_but_not_another_students(): void
@@ -84,11 +84,22 @@ class StudentManagementTest extends TestCase
     public function test_matricula_must_be_unique(): void
     {
         $admin = User::factory()->admin()->create();
-        Student::factory()->create(['matricula' => 'DUP001']);
+        Student::factory()->create(['matricula' => '100099']);
 
         $this->actingAs($admin)->postJson('/api/students', [
-            'matricula' => 'DUP001',
+            'matricula' => '100099',
             'nombre' => 'Otro Estudiante',
         ])->assertStatus(422);
+    }
+
+    public function test_matricula_with_letters_is_rejected(): void
+    {
+        // Las matrículas de la UDG son solo numéricas.
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->postJson('/api/students', [
+            'matricula' => 'A100099',
+            'nombre' => 'Con Letras',
+        ])->assertStatus(422)->assertJsonValidationErrors('matricula');
     }
 }

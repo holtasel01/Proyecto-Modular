@@ -3,9 +3,10 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { ApiError } from "../api/client";
 
-export function LoginPage() {
-  const { user, login } = useAuth();
-  const [identifier, setIdentifier] = useState("");
+export function RegisterPage() {
+  const { user, register } = useAuth();
+  const [matricula, setMatricula] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -19,9 +20,9 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(identifier, password);
+      await register(matricula, email, password);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo iniciar sesión.");
+      setError(err instanceof ApiError ? err.message : "No se pudo completar el registro.");
     } finally {
       setSubmitting(false);
     }
@@ -31,16 +32,28 @@ export function LoginPage() {
     <div className="auth-screen">
       <form className="card auth-card" onSubmit={handleSubmit}>
         <h1>Facelog</h1>
-        <p className="muted">Inicia sesión para continuar</p>
+        <p className="muted">
+          Crea tu cuenta con la matrícula que ya te dio de alta el laboratorio.
+        </p>
 
         <label>
-          Código de estudiante o correo
+          Código de estudiante
           <input
             type="text"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
+            value={matricula}
+            onChange={(e) => setMatricula(e.target.value)}
             required
             autoFocus
+          />
+        </label>
+
+        <label>
+          Correo
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
           />
         </label>
 
@@ -51,17 +64,18 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            minLength={8}
           />
         </label>
 
         {error && <p className="error-text">{error}</p>}
 
         <button type="submit" disabled={submitting}>
-          {submitting ? "Ingresando…" : "Ingresar"}
+          {submitting ? "Creando cuenta…" : "Crear cuenta"}
         </button>
 
         <p className="muted auth-switch">
-          ¿Eres estudiante y no tienes cuenta? <Link to="/registro">Regístrate</Link>
+          ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
         </p>
       </form>
     </div>

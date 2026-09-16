@@ -142,12 +142,22 @@ Luego:
 
   php artisan migrate --seed
 
-Esto crea todas las tablas de la base de datos y siembra un usuario
-administrador de prueba:
+Esto crea todas las tablas de la base de datos y siembra dos usuarios
+de prueba:
 
-  Email:    admin@facelog.test
-  Password: password
-  Rol:      admin
+  Administrador:
+    Email:    admin@facelog.test
+    Password: password
+    Rol:      admin
+
+  Estudiante (ya con su cuenta vinculada, no hace falta registrarlo):
+    Email:    estudiante@facelog.test
+    Matricula: 218900001
+    Password: password
+    Rol:      student
+
+El login acepta tanto el email como la matricula del estudiante, junto
+con la contraseña.
 
 Para verificar que el backend quedo bien instalado:
 
@@ -175,6 +185,12 @@ Abrir en el navegador: http://localhost:5173
 Debe aparecer la pantalla de login de Facelog. Entrar con
 admin@facelog.test / password para confirmar que el frontend ya se
 comunica correctamente con el backend.
+
+Desde esta pantalla tambien se puede probar el autoregistro de
+estudiantes: el enlace "Registrate" lleva a /registro, donde un
+estudiante que el admin ya dio de alta (con su matricula) puede crear
+su propia cuenta con matricula + correo + contraseña. Sin admin todavia
+dando de alta esa matricula primero, el registro se rechaza (404).
 
 
 -----------------------------------------
@@ -230,11 +246,16 @@ que se eligio asi) en docs/07-interfaz-laboratorio.md.
 
 
 -----------------------------------------
-7. APACHE, SOLO PARA EL ENROLAMIENTO FACIAL VIA WEB
+7. APACHE, PARA EL ENROLAMIENTO FACIAL Y LA ANALITICA (K-MEANS)
 -----------------------------------------
 "php artisan serve" no puede procesar la subida de la foto de enrolamiento
-en Windows. Para esa funcion especifica, hay que servir el backend con
-Apache en vez de "artisan serve".
+ni el calculo de agrupamiento de estudiantes (pagina "Analitica" del panel
+admin) en Windows. Ambas funciones invocan un script de Python como
+subproceso, y en los dos casos ese script termina importando "asyncio" de
+forma transitoria (DeepFace/TensorFlow en un caso, scikit-learn/joblib en
+el otro) — es la misma limitacion de Windows, no dos problemas distintos.
+Para esas dos funciones, hay que servir el backend con Apache en vez de
+"artisan serve".
 
 1. Confirmar que XAMPP incluye Apache (viene junto con PHP si se instalo
    XAMPP en el paso 1).
@@ -266,9 +287,10 @@ Apache en vez de "artisan serve".
    y reiniciar "npm run dev".
 
 Con esto, subir una foto de enrolamiento desde el panel del estudiante o
-del admin ya funciona. El resto de los pasos de esta guia (4, 5 y 6) siguen
-funcionando igual con "artisan serve" normal — Apache solo hace falta para
-esta funcion puntual.
+del admin, y usar la pagina "Analitica" del panel admin, ya funcionan. El
+resto de los pasos de esta guia (4, 5 y 6) siguen funcionando igual con
+"artisan serve" normal — Apache solo hace falta para estas dos funciones
+puntuales.
 
 
 -----------------------------------------
@@ -294,6 +316,9 @@ Antes de dar la instalacion por terminada, confirmar cada punto:
       activado, "python -m pytest tests/ -q" — deben pasar.
   [ ] (Si configuraste Apache) subir una foto de enrolamiento desde el
       panel funciona sin error 500.
+  [ ] (Si configuraste Apache, y hay al menos 3 estudiantes activos con
+      alguna sesion de asistencia) la pagina "Analitica" del panel admin
+      muestra la tabla y el grafico de agrupamiento sin error.
 
 Si algo de esto falla, revisar docs/05-manual.md seccion 9 (problemas
 comunes) antes de seguir.

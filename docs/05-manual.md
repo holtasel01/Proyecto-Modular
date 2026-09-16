@@ -162,13 +162,15 @@ Prefijo `/api`. Autenticación: cookie de sesión (Sanctum SPA) para usuarios, `
 
 | Método | Ruta | Quién | Qué hace |
 |---|---|---|---|
-| POST | `/login` | público (con rate limit) | Inicia sesión |
+| POST | `/register` | público (con rate limit) | Autoregistro de estudiante (matrícula ya dada de alta + correo + contraseña) |
+| POST | `/login` | público (con rate limit) | Inicia sesión (matrícula o correo + contraseña) |
 | POST | `/logout` | usuario | Cierra sesión |
 | GET | `/me` | usuario | Perfil propio |
 | GET/POST/GET/PATCH | `/students`, `/students/{id}` | admin (GET propio también estudiante) | CRUD de estudiantes |
 | GET/POST/PUT | `/students/{id}/face-profile`, `/face-photo` | ver §5 | Consultar/subir/reemplazar enrolamiento |
 | POST | `/attendance/events` | **device** (`attendance:write`) | Reporta un reconocimiento |
 | GET | `/me/attendance`, `/me/summary` | estudiante | Historial y horas propias |
+| GET | `/me/prediction` | estudiante | Ritmo actual y fecha estimada para completar la meta de horas (`docs/09-prediccion-estudiante.md`) |
 | GET/PATCH | `/attendance/sessions[/{id}]` | admin | Listar / corregir manualmente |
 | GET | `/lab/status` | admin | Quién está dentro ahora |
 | GET/PATCH | `/incidents[/{id}]` | admin | Listar / resolver |
@@ -176,6 +178,7 @@ Prefijo `/api`. Autenticación: cookie de sesión (Sanctum SPA) para usuarios, `
 | GET/PATCH | `/settings` | admin | Ver/editar parámetros (§2) |
 | GET/POST/DELETE | `/devices[/{id}]` | admin | Alta/baja de dispositivos y sus tokens |
 | GET | `/sync/face-catalog` | **device** (`sync`) | Catálogo de embeddings para reconocer localmente |
+| GET | `/analytics/student-clusters` | admin | Agrupamiento K-Means por patrón de asistencia (`docs/08-mineria-datos.md`) |
 
 Contrato completo (request/response, validaciones) en `docs/02-diseno.md` §5.
 
@@ -235,10 +238,10 @@ Qué cubre cada archivo, y las trampas no obvias de probar Laravel+Sanctum que c
 |---|---|---|
 | `could not find driver` con Postgres | `pdo_pgsql`/`pgsql` deshabilitados en `php.ini` | §1 |
 | `419 CSRF token mismatch` intermitente en el frontend | Doble llamada a `/me` por `React.StrictMode` — dos sesiones antes de tiempo | `frontend/src/auth/AuthContext.tsx` (guardia con `useRef`) |
-| `WinError 10106` al subir una foto con `php artisan serve` | Limitación de Windows: un subproceso que importa `asyncio` falla si el padre mantiene un socket en escucha | `docs/02-diseno.md` §1 — usar Apache, no `artisan serve`, para esa ruta |
+| `WinError 10106` al subir una foto, o al abrir la página Analítica, con `php artisan serve` | Limitación de Windows: un subproceso que importa `asyncio` falla si el padre mantiene un socket en escucha (le pasa a DeepFace/TensorFlow y también a scikit-learn/joblib) | `docs/02-diseno.md` §1 y `docs/08-mineria-datos.md` §4 — usar Apache, no `artisan serve`, para esas dos rutas |
 | Error de PostgreSQL sobre `duration_minutes` no es entero | Carbon 3 devuelve `diffInMinutes()` como float | Ya corregido en `AttendanceService`/`AttendanceSessionController` — si aparece de nuevo en otro cálculo de duración, envolver en `(int)` |
 | Una prueba de PHPUnit no ve el efecto de revocar un token/cerrar sesión en la siguiente petición | `Illuminate\Auth\RequestGuard` cachea el usuario resuelto dentro del mismo test | `docs/04-pruebas.md` §4 — `Auth::forgetGuards()` entre peticiones |
 
-**Apache para el enrolamiento en vivo — ya configurado**: vhost en `C:\xampp\apache\conf\extra\httpd-vhosts.conf` (`Listen 8088` + `VirtualHost *:8088` → `backend/public`), elegido tras verificar qué puertos estaban libres antes de tocar nada (había otro servicio ya corriendo en el 8080, sin relación con Facelog, que no se tocó). Se arranca con `C:\xampp\apache_start.bat`; el frontend debe apuntar `VITE_API_BASE_URL` a `http://localhost:8088` para usarlo en vez de `artisan serve`. Verificado subiendo una foto real de punta a punta.
+**Apache para el enrolamiento en vivo y la analítica — ya configurado**: vhost en `C:\xampp\apache\conf\extra\httpd-vhosts.conf` (`Listen 8088` + `VirtualHost *:8088` → `backend/public`), elegido tras verificar qué puertos estaban libres antes de tocar nada (había otro servicio ya corriendo en el 8080, sin relación con Facelog, que no se tocó). Se arranca con `C:\xampp\apache_start.bat`; el frontend debe apuntar `VITE_API_BASE_URL` a `http://localhost:8088` para usarlo en vez de `artisan serve`. Verificado subiendo una foto real de punta a punta, y por separado calculando el agrupamiento K-Means con datos reales.
 
-**Estado**: las diez etapas originales están completas y validadas con datos reales (incluida una fotografía real de una persona, §7), más una etapa adicional posterior (`docs/07-interfaz-laboratorio.md`) que agregó la ventana visual de `recognition-app`. No hay ningún gap de cobertura conocido pendiente.
+**Estado**: las diez etapas originales están completas y validadas con datos reales (incluida una fotografía real de una persona, §7), más tres etapas adicionales posteriores: la ventana visual de `recognition-app` (`docs/07-interfaz-laboratorio.md`), el agrupamiento de estudiantes por K-Means (`docs/08-mineria-datos.md`), y la ventana de predicción del estudiante hacia sus 480 horas de meta (`docs/09-prediccion-estudiante.md`). No hay ningún gap de cobertura conocido pendiente.

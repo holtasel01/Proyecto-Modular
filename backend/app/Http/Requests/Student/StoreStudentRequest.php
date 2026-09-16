@@ -16,7 +16,8 @@ class StoreStudentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'matricula' => ['required', 'string', 'max:20', 'unique:students,matricula'],
+            // Solo números — así son las matrículas de la UDG, no se aceptan letras.
+            'matricula' => ['required', 'string', 'max:20', 'regex:/^\d+$/', 'unique:students,matricula'],
             'nombre' => ['required', 'string', 'max:150'],
             'carrera' => ['nullable', 'string', 'max:100'],
             'horas_meta' => ['nullable', 'integer', 'min:1'],

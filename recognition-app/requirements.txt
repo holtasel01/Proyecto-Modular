@@ -9,5 +9,9 @@ opencv-python==4.10.0.84
 mediapipe==0.10.14
 numpy<2
 
+# Minería de datos: agrupamiento de estudiantes por patrón de asistencia
+# (etapa adicional, docs/08-mineria-datos.md)
+scikit-learn==1.5.2
+
 # Pruebas (Etapa 5/9)
 pytest==9.1.1

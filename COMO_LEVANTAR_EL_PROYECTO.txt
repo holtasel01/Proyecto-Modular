@@ -27,9 +27,10 @@ Terminal 1:
 
 Queda escuchando en: http://localhost:8000
 
-Si en esta sesion vas a subir una foto de enrolamiento facial, usa Apache
+Si en esta sesion vas a subir una foto de enrolamiento facial, o vas a usar
+la pagina "Analitica" del panel admin (agrupamiento K-Means), usa Apache
 en vez de este comando (ver seccion 4 mas abajo) — "artisan serve" no
-puede procesar esa funcion en Windows.
+puede procesar ninguna de esas dos funciones en Windows.
 
 Verificar que respondio: abrir http://localhost:8000/up en el navegador,
 debe decir "Application up".
@@ -48,8 +49,18 @@ abre en el navegador para usar la plataforma.
 
 Credenciales de prueba:
 
-  Email:    admin@facelog.test
-  Password: password
+  Administrador:
+    Email/codigo: admin@facelog.test
+    Password:     password
+
+  Estudiante de prueba (ya tiene cuenta, no hace falta registrarlo):
+    Email o matricula: estudiante@facelog.test  /  218900001
+    Password:           password
+
+Un estudiante nuevo (dado de alta por el admin, pero sin cuenta todavia)
+puede crear la suya en /registro dentro de la plataforma: pide su
+matricula, un correo y una contraseña. El login acepta despues tanto la
+matricula como el correo.
 
 
 -----------------------------------------
@@ -78,10 +89,12 @@ en la terminal.
 
 -----------------------------------------
 4. USAR APACHE EN VEZ DE "ARTISAN SERVE"
-   (necesario solo para subir fotos de enrolamiento)
+   (necesario para subir fotos de enrolamiento, o para la pagina
+   "Analitica" del panel admin)
 -----------------------------------------
 Si en esta sesion necesitas que funcione la subida de foto de enrolamiento
-facial, en vez del paso 1 hacer esto:
+facial, o la pagina "Analitica" (agrupamiento K-Means), en vez del paso 1
+hacer esto:
 
   1. Arrancar Apache:
      C:\xampp\apache_start.bat

@@ -14,6 +14,7 @@ export function Layout() {
             <>
               <NavLink to="/">Mi resumen</NavLink>
               <NavLink to="/historial">Historial</NavLink>
+              <NavLink to="/prediccion">Predicción</NavLink>
             </>
           )}
           {user?.role === "admin" && (
@@ -24,6 +25,7 @@ export function Layout() {
               <NavLink to="/incidencias">Incidencias</NavLink>
               <NavLink to="/dispositivos">Dispositivos</NavLink>
               <NavLink to="/configuracion">Configuración</NavLink>
+              <NavLink to="/analitica">Analítica</NavLink>
             </>
           )}
         </nav>

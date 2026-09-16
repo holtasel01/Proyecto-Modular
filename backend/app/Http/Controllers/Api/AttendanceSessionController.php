@@ -8,6 +8,7 @@ use App\Http\Resources\AttendanceSessionResource;
 use App\Models\AttendanceSession;
 use App\Services\AuditLogger;
 use App\Services\IncidentService;
+use App\Services\StudentProjectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,6 +17,7 @@ class AttendanceSessionController extends Controller
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly IncidentService $incidents,
+        private readonly StudentProjectionService $projection,
     ) {
     }
 
@@ -107,6 +109,18 @@ class AttendanceSessionController extends Controller
             'horas_meta' => $student->horas_meta,
             'progreso_porcentaje' => $progreso,
         ]);
+    }
+
+    /**
+     * GET /me/prediction — proyección personal del propio estudiante hacia
+     * su meta de horas: ritmo actual, cuánto le falta, cuándo terminaría
+     * (docs/09-prediccion-estudiante.md).
+     */
+    public function myPrediction(Request $request): JsonResponse
+    {
+        $student = $request->user()->student()->firstOrFail();
+
+        return response()->json($this->projection->project($student));
     }
 
     /**

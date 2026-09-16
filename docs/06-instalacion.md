@@ -138,11 +138,14 @@ Luego:
 php artisan migrate --seed
 ```
 
-Esto crea todas las tablas (`docs/02-diseno.md` §3) y siembra un usuario administrador de prueba:
+Esto crea todas las tablas (`docs/02-diseno.md` §3) y siembra dos usuarios de prueba:
 
-| Email | Password | Rol |
+| Código / Email | Password | Rol |
 |---|---|---|
 | `admin@facelog.test` | `password` | admin |
+| `218900001` o `estudiante@facelog.test` | `password` | student |
+
+El estudiante de prueba ya tiene su cuenta vinculada — el login acepta tanto su matrícula como su correo.
 
 **Verificar que funciona:**
 
@@ -152,7 +155,7 @@ php artisan serve
 
 Abrir `http://localhost:8000/up` en el navegador — debe mostrar "Application up". Dejar corriendo esta terminal.
 
-> **Nota**: `php artisan serve` sirve para todo el backend **excepto** subir la foto de enrolamiento (necesita Apache, ver §7) — es una limitación de Windows, no del proyecto (`docs/02-diseno.md` §1).
+> **Nota**: `php artisan serve` sirve para todo el backend **excepto** subir la foto de enrolamiento y la página de Analítica/K-Means (ambas necesitan Apache, ver §7) — es una limitación de Windows, no del proyecto (`docs/02-diseno.md` §1, `docs/08-mineria-datos.md` §4).
 
 ---
 
@@ -168,6 +171,8 @@ npm run dev
 ```
 
 Abrir `http://localhost:5173` — debe mostrar la pantalla de login de Facelog. Iniciar sesión con `admin@facelog.test` / `password` para confirmar que el frontend ya habla con el backend.
+
+También se puede probar el **autoregistro** desde el enlace "Regístrate" (`/registro`): un estudiante que el admin ya dio de alta (con su matrícula) puede crear su propia cuenta con matrícula + correo + contraseña. Sin ese estudiante pre-existente, el registro se rechaza con un 404.
 
 ---
 
@@ -209,9 +214,9 @@ Si es válido, imprime `Facelog recognition-app - reconocimiento en vivo. 'q'/Es
 
 ---
 
-## 7. Apache, solo para el enrolamiento facial vía web
+## 7. Apache, para el enrolamiento facial y la analítica (K-Means)
 
-`php artisan serve` no puede procesar la subida de foto de enrolamiento en Windows (`docs/02-diseno.md` §1). Para esa función específica, servir el backend con Apache en vez de `artisan serve`:
+`php artisan serve` no puede procesar la subida de foto de enrolamiento, ni el cálculo de agrupamiento de estudiantes (página "Analítica" del panel admin), en Windows (`docs/02-diseno.md` §1, `docs/08-mineria-datos.md` §4) — ambas invocan un script de Python como subproceso que termina importando `asyncio` de forma transitoria. Para esas dos funciones, servir el backend con Apache en vez de `artisan serve`:
 
 1. Confirmar que XAMPP incluye Apache (se instala junto con PHP si usaste XAMPP en el paso 1).
 2. Agregar al final de `C:\xampp\apache\conf\extra\httpd-vhosts.conf` (ajustando la ruta a donde tengas el proyecto):
@@ -232,7 +237,7 @@ Si es válido, imprime `Facelog recognition-app - reconocimiento en vivo. 'q'/Es
 3. Arrancar Apache: `C:\xampp\apache_start.bat` (o el botón "Start" de Apache en el panel de control de XAMPP).
 4. Cambiar `frontend/.env`: `VITE_API_BASE_URL=http://localhost:8088`, y reiniciar `npm run dev`.
 
-Con esto, subir una foto de enrolamiento desde el panel del estudiante/admin ya funciona. El resto de los pasos de esta guía (§4–6) siguen funcionando igual con `artisan serve` normal — Apache solo hace falta para esta función puntual.
+Con esto, subir una foto de enrolamiento desde el panel del estudiante/admin, y usar la página "Analítica" del panel admin, ya funcionan. El resto de los pasos de esta guía (§4–6) siguen funcionando igual con `artisan serve` normal — Apache solo hace falta para estas dos funciones puntuales.
 
 ---
 
@@ -240,12 +245,15 @@ Con esto, subir una foto de enrolamiento desde el panel del estudiante/admin ya 
 
 - [ ] `http://localhost:8000/up` (o `:8088` si usas Apache) responde "Application up".
 - [ ] `http://localhost:5173` muestra el login y puedes entrar como `admin@facelog.test`.
+- [ ] También puedes entrar como el estudiante de prueba (`218900001` o `estudiante@facelog.test` / `password`).
 - [ ] Puedes crear un estudiante desde **Estudiantes → Nuevo estudiante**.
+- [ ] Puedes registrar una cuenta nueva desde `/registro` usando la matrícula de ese estudiante recién creado.
 - [ ] Puedes crear un dispositivo desde **Dispositivos** y copiar su token.
 - [ ] `recognition-app`: `python src\main.py` llega al mensaje "reconocimiento en vivo" sin error HTTP 401/403 (el fallo por falta de cámara al final es normal, ver §6). Con cámara conectada, además debe abrirse la ventana "Facelog - Laboratorio".
 - [ ] Pruebas del backend: `cd backend && php artisan test` → deben pasar (necesita la base `facelog_testing` del paso 3).
 - [ ] Pruebas de `recognition-app`: `venv\Scripts\python.exe -m pytest tests/ -q` → deben pasar.
 - [ ] (Si configuraste Apache, §7) subir una foto de enrolamiento desde el panel funciona sin error 500.
+- [ ] (Si configuraste Apache, y hay al menos 3 estudiantes activos con alguna sesión) la página "Analítica" del panel admin muestra la tabla y el gráfico de agrupamiento sin error.
 
 Si algo de esto falla, revisar la tabla de problemas comunes en `docs/05-manual.md` §9 antes de seguir.
 

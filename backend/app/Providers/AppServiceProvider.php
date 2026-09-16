@@ -29,13 +29,15 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
-        // Límite específico y más estricto para /login, por email+IP — evita
-        // fuerza bruta sin bloquear a otros usuarios que comparten la IP
-        // (ej. la misma red del laboratorio). docs/02-diseno.md §14 (RNF2).
+        // Límite específico y más estricto para /login y /register, por
+        // identificador+IP — evita fuerza bruta sin bloquear a otros usuarios
+        // que comparten la IP (ej. la misma red del laboratorio).
+        // docs/02-diseno.md §14 (RNF2). Compartido entre ambas rutas: /login
+        // manda 'identifier' (matrícula o correo), /register manda 'email'.
         RateLimiter::for('login', function (Request $request) {
-            $email = (string) $request->input('email');
+            $key = (string) ($request->input('identifier') ?? $request->input('email'));
 
-            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+            return Limit::perMinute(5)->by($key.'|'.$request->ip());
         });
     }
 }
