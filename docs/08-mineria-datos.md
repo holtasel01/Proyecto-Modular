@@ -53,13 +53,23 @@ Igual que con `compute_embedding.py` (`docs/02-diseno.md`, nota tras la Etapa 5)
 
 **En la práctica**: para usar la página de Analítica del panel admin, el backend debe estar corriendo bajo Apache, no `artisan serve` — exactamente la misma condición que ya existía para subir fotos de enrolamiento (ver `docs/06-instalacion.md` §7).
 
-## 5. Limitación conocida: pocos estudiantes distorsionan los grupos
+## 5. Rendimiento: por qué era lento y cómo se resolvió
+
+Reportado por el usuario ("se tarda demasiado en cargar los datos"). Se midió cada endpoint del proyecto con `curl -w "%{time_total}"`: todos responden en 100-250ms, **excepto** `/api/analytics/student-clusters`, que tomaba entre 1.6 y 3.5 segundos — de lejos el más lento de toda la API.
+
+**Causa**: cada petición arrancaba un intérprete de Python nuevo desde cero, que tiene que importar `numpy`, `scipy` y `scikit-learn` (con todo lo que eso arrastra) antes de poder calcular nada — ese costo de arranque se pagaba en **cada** carga de la página de Analítica, aunque los datos de asistencia no hubieran cambiado desde la última vez.
+
+**Corrección**: el resultado del agrupamiento se cachea 5 minutos (`StudentClusteringService`, `Cache::remember`-equivalente). La carga normal de la página usa la caché si hay una vigente (tan rápida como cualquier otro endpoint, ~150ms); el botón **"Recalcular"** del frontend manda `?refresh=1`, que se salta la caché a propósito y fuerza un cálculo fresco. Verificado en vivo contra el backend real: primera llamada (forzada) ≈1.8s, llamadas siguientes dentro de la ventana de caché ≈0.16s.
+
+No se tocó nada del enrolamiento facial (`compute_embedding.py`) — ese sí necesita ser síncrono y sin caché, porque cada foto es distinta; el problema de rendimiento era específico del agrupamiento, que sí puede reutilizar un resultado reciente sin perder utilidad real para el admin.
+
+## 6. Limitación conocida: pocos estudiantes distorsionan los grupos
 
 `k=3` es fijo, así que con muy pocos estudiantes con datos (el mínimo exigido es 3), K-Means puede separar en grupos distintos a estudiantes con patrones casi idénticos — no hay forma de evitarlo sin bajar `k` dinámicamente, lo que se decidió no hacer para mantener las tres etiquetas consistentes (bajo/medio/alto) sea cual sea el tamaño del laboratorio. Con más estudiantes (una decena o más), los grupos se estabilizan y reflejan patrones reales, no ruido. Verificado con datos sintéticos: 6 estudiantes en tres parejas claramente distintas se agruparon correctamente; con solo 4 estudiantes muy dispares en actividad, dos de ellos con valores parecidos (20h vs. 21h acumuladas) terminaron en grupos distintos — es un efecto esperado de `k=3` fijo con pocos datos, no un error del algoritmo.
 
-## 6. Pruebas
+## 7. Pruebas
 
 - `recognition-app/tests/test_compute_clusters_cli.py` (4 pruebas): agrupamiento correcto con datos sintéticos claramente separados, rechazo con menos de 3 estudiantes, JSON inválido, estudiante sin `features`.
-- `backend/tests/Feature/Analytics/StudentClusterTest.php` (6 pruebas): solo admin, error claro con menos de 3 estudiantes con sesiones, estudiantes sin sesiones (o inactivos) excluidos del cálculo, **corrección matemática de las 6 características verificada con un caso de estudiante perfectamente constante** (4 sesiones de 2h, una por semana durante 4 semanas exactas → variabilidad = 0), y el camino feliz/de error del script simulado con `Process::fake()`.
+- `backend/tests/Feature/Analytics/StudentClusterTest.php` (8 pruebas): solo admin, error claro con menos de 3 estudiantes con sesiones, estudiantes sin sesiones (o inactivos) excluidos del cálculo, **corrección matemática de las 6 características verificada con un caso de estudiante perfectamente constante** (4 sesiones de 2h, una por semana durante 4 semanas exactas → variabilidad = 0), el camino feliz/de error del script simulado con `Process::fake()`, y las dos pruebas de caché (§5): una segunda llamada no vuelve a invocar Python, `?refresh=1` sí lo fuerza.
 
 Verificado también de punta a punta con datos reales (vía Apache, no simulado): estudiantes con historial real de asistencia sembrado a propósito, agrupados correctamente y visibles en el navegador (tabla + gráfico de dispersión).

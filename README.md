@@ -163,7 +163,7 @@ Para correr las pruebas: `venv\Scripts\python.exe -m pytest tests/ -q` (18 prueb
 - `src/recognition/embedding.py`: detección + embedding facial real con DeepFace (modelo Facenet512, detector OpenCV).
 - `src/recognition/matcher.py` + `similarity.py`: compara un embedding contra el catálogo sincronizado (similitud coseno).
 - `src/liveness/blink.py`: liveness básico por detección de parpadeo (Eye Aspect Ratio con MediaPipe FaceMesh) — bloquea fotos/pantallas estáticas, no un video en reproducción (limitación documentada, `docs/02-diseno.md` §11).
-- `src/capture/camera.py`, `src/api_client/client.py`, `src/sync/catalog.py` (con caché en disco y fallback sin conexión), `src/queue/outbox.py` (cola SQLite para reintentos offline).
+- `src/capture/camera.py`, `src/api_client/client.py`, `src/sync/catalog.py` (con caché en disco y fallback sin conexión), `src/local_queue/outbox.py` (cola SQLite para reintentos offline — se llama `local_queue`, no `queue`, para no chocar con el módulo `queue` de la librería estándar de Python, ver `docs/05-manual.md` §9).
 - `src/ui/feedback.py` (**nuevo**, etapa adicional): ventana con el video de la cámara y un mensaje superpuesto ("Bienvenido, ...", "No reconocido", etc.) — antes la única retroalimentación era texto en la consola. Ver [docs/07-interfaz-laboratorio.md](docs/07-interfaz-laboratorio.md).
 - `src/main.py`: loop de reconocimiento en vivo completo (captura → liveness → embedding → comparación → anti-duplicado → reporte a la API o cola local → ventana con el resultado).
 - `scripts/compute_embedding.py`: ya no es un placeholder — usa el DeepFace real.

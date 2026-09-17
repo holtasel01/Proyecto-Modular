@@ -25,7 +25,11 @@ class StudentClusterController extends Controller
         abort_unless($request->user()->isAdmin(), 403);
 
         try {
-            $result = $this->clusteringService->cluster();
+            // El resultado se cachea por unos minutos (StudentClusteringService)
+            // porque recalcular implica arrancar Python + scikit-learn desde
+            // cero en cada request — "Recalcular" en el frontend manda
+            // ?refresh=1 para saltarse esa caché a propósito.
+            $result = $this->clusteringService->cluster(forceRefresh: $request->boolean('refresh'));
         } catch (StudentClusteringException $e) {
             abort(422, $e->getMessage());
         }

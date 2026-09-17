@@ -164,4 +164,36 @@ class StudentClusterTest extends TestCase
 
         $response->assertStatus(422)->assertJsonPath('message', 'algo salió mal en el script');
     }
+
+    public function test_a_second_call_uses_the_cached_result_instead_of_running_python_again(): void
+    {
+        $admin = User::factory()->admin()->create();
+        foreach (range(1, 3) as $i) {
+            $s = Student::factory()->create();
+            $this->closedSessionAt($s, '2026-01-05 08:00:00', 60);
+        }
+
+        Process::fake(['*' => Process::result(output: json_encode(['clusters' => [], 'centroids' => []]))]);
+
+        $this->actingAs($admin)->getJson('/api/analytics/student-clusters')->assertOk();
+        $this->actingAs($admin)->getJson('/api/analytics/student-clusters')->assertOk();
+
+        Process::assertRanTimes(fn () => true, 1);
+    }
+
+    public function test_refresh_query_param_bypasses_the_cache_and_runs_python_again(): void
+    {
+        $admin = User::factory()->admin()->create();
+        foreach (range(1, 3) as $i) {
+            $s = Student::factory()->create();
+            $this->closedSessionAt($s, '2026-01-05 08:00:00', 60);
+        }
+
+        Process::fake(['*' => Process::result(output: json_encode(['clusters' => [], 'centroids' => []]))]);
+
+        $this->actingAs($admin)->getJson('/api/analytics/student-clusters')->assertOk();
+        $this->actingAs($admin)->getJson('/api/analytics/student-clusters?refresh=1')->assertOk();
+
+        Process::assertRanTimes(fn () => true, 2);
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\StudentClusteringException;
 use App\Models\Student;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -18,6 +19,18 @@ class StudentClusteringService
 {
     private const MIN_STUDENTS_FOR_CLUSTERING = 3;
 
+    /**
+     * Cada llamada arranca un intérprete de Python nuevo que importa numpy/
+     * scipy/scikit-learn desde cero (~1.5-3.5s medido en desarrollo) — muy
+     * por encima de cualquier otro endpoint del proyecto (~100-250ms). Los
+     * patrones de asistencia no cambian de un momento a otro, así que se
+     * cachea el resultado por unos minutos en vez de recalcular en cada
+     * carga de la página de Analítica.
+     */
+    private const CACHE_TTL_SECONDS = 300;
+
+    private const CACHE_KEY = 'student-clusters';
+
     public function __construct(private readonly AttendanceFeatureCalculator $calculator)
     {
     }
@@ -25,7 +38,26 @@ class StudentClusteringService
     /**
      * @return array{clusters: array<int, array<string, mixed>>, centroids: array<int, array<string, float>>}
      */
-    public function cluster(): array
+    public function cluster(bool $forceRefresh = false): array
+    {
+        if (! $forceRefresh) {
+            $cached = Cache::get(self::CACHE_KEY);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $result = $this->computeFresh();
+
+        Cache::put(self::CACHE_KEY, $result, self::CACHE_TTL_SECONDS);
+
+        return $result;
+    }
+
+    /**
+     * @return array{clusters: array<int, array<string, mixed>>, centroids: array<int, array<string, float>>}
+     */
+    private function computeFresh(): array
     {
         $features = $this->buildFeatureVectors();
 

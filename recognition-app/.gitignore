@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .env
 queue.sqlite3
+face_catalog_cache.json
 
 # fotos de prueba manuales (de terceros, no para versionar — ver tests/fixtures/manual)
 tests/fixtures/manual/

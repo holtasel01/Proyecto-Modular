@@ -31,7 +31,7 @@ from src.api_client.client import ApiClient, ApiConnectionError, ApiRejectedErro
 from src.capture.camera import Camera
 from src.config import load_config
 from src.liveness.blink import BlinkDetector
-from src.queue.outbox import Outbox
+from src.local_queue.outbox import Outbox
 from src.recognition.embedding import (
     MultipleFacesDetectedError,
     NoFaceDetectedError,

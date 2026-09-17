@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.queue.outbox import Outbox
+from src.local_queue.outbox import Outbox
 
 
 def test_enqueue_and_pending(tmp_path):

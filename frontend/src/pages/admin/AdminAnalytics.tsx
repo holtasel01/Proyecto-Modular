@@ -86,11 +86,11 @@ export function AdminAnalytics() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function load() {
+  async function load(forceRefresh = false) {
     setLoading(true);
     setError(null);
     try {
-      const data = await getStudentClusters();
+      const data = await getStudentClusters(forceRefresh);
       setResult(data);
     } catch (err) {
       setError(
@@ -103,7 +103,9 @@ export function AdminAnalytics() {
   }
 
   useEffect(() => {
-    load();
+    // Carga inicial: usa el resultado cacheado si hay uno reciente (rápido).
+    // "Recalcular" sí fuerza un cálculo fresco — ver el botón más abajo.
+    load(false);
   }, []);
 
   const sortedClusters = result
@@ -116,7 +118,7 @@ export function AdminAnalytics() {
     <section className="card">
       <div className="row-between">
         <h2>Patrones de asistencia (K-Means)</h2>
-        <button type="button" onClick={() => void load()} disabled={loading}>
+        <button type="button" onClick={() => void load(true)} disabled={loading}>
           {loading ? "Calculando…" : "Recalcular"}
         </button>
       </div>

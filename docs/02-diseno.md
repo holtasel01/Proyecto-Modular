@@ -116,7 +116,7 @@ recognition-app/
 │   ├── recognition/            # DeepFace: detección + embedding + comparación (usado por main.py y por scripts/)
 │   ├── liveness/                # parpadeo/EAR con MediaPipe
 │   ├── sync/                    # descarga y cachea el catálogo de embeddings (GET /api/sync/face-catalog)
-│   ├── queue/                   # outbox local en SQLite para reintentos sin conexión
+│   ├── local_queue/              # outbox local en SQLite para reintentos sin conexión (renombrado de "queue/" — chocaba con el módulo `queue` de la librería estándar de Python, ver `docs/05-manual.md` §9)
 │   ├── api_client/               # cliente HTTP hacia Laravel (token de dispositivo)
 │   └── main.py                   # punto de entrada / loop principal + UI mínima (reconocimiento en vivo)
 ├── scripts/

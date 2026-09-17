@@ -67,11 +67,26 @@ matricula como el correo.
 3. LEVANTAR RECOGNITION-APP (RECONOCIMIENTO FACIAL, OPCIONAL)
 -----------------------------------------
 Solo hace falta si vas a probar el reconocimiento en vivo con la camara
-del laboratorio. Terminal 3:
+del laboratorio. Terminal 3, parado en la carpeta raiz del proyecto
+("Proyecto Modular"):
 
   cd recognition-app
   venv\Scripts\activate
   python src\main.py
+
+El "cd recognition-app" te deja parado dentro de esa carpeta — por eso el
+ultimo comando usa la ruta relativa "src\main.py" y no hace falta escribir
+la ruta completa. El archivo que se ejecuta es:
+
+  recognition-app\src\main.py
+
+(ruta completa: ...\Proyecto Modular\recognition-app\src\main.py)
+
+Si accidentalmente ejecutas "python src\main.py" desde otra carpeta (por
+ejemplo, desde la raiz del proyecto sin haber hecho el "cd" de arriba),
+Python no va a encontrar el archivo y va a fallar con un error de tipo
+"No such file or directory" o similar — en ese caso, confirmar en que
+carpeta estas parado antes de ejecutar el comando.
 
 Requiere que ya exista un DEVICE_TOKEN valido en recognition-app\.env
 (se genera una sola vez desde el panel admin -> Dispositivos — ver
