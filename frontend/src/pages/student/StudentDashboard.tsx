@@ -18,7 +18,7 @@ export function StudentDashboard() {
   useEffect(() => {
     if (!studentId) return;
     getStudent(studentId).then(({ data }) => setStudent(data));
-    getFaceProfile(studentId).then(setFaceProfile);
+    getFaceProfile(studentId).then(({ data }) => setFaceProfile(data));
     mySummary().then(setSummary);
   }, [studentId]);
 
@@ -27,8 +27,8 @@ export function StudentDashboard() {
     setUploadError(null);
     setUploading(true);
     try {
-      const profile = await uploadFacePhoto(studentId, file);
-      setFaceProfile(profile);
+      const { data } = await uploadFacePhoto(studentId, file);
+      setFaceProfile(data);
     } catch (error) {
       setUploadError(error instanceof ApiError ? error.message : "No se pudo subir la foto.");
     } finally {

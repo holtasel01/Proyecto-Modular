@@ -32,6 +32,8 @@ export type SessionStatus = "open" | "closed" | "inconsistent";
 export interface AttendanceSession {
   id: number;
   studentId: number;
+  matricula?: string;
+  nombre?: string;
   startedAt: string;
   endedAt: string | null;
   durationMinutes: number | null;

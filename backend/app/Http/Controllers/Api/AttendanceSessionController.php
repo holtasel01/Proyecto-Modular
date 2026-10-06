@@ -29,6 +29,7 @@ class AttendanceSessionController extends Controller
         $this->authorize('viewAny', AttendanceSession::class);
 
         $sessions = AttendanceSession::query()
+            ->with('student:id,matricula,nombre')
             ->when($request->filled('student_id'), fn ($q) => $q->where('student_id', $request->integer('student_id')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('from'), fn ($q) => $q->where('started_at', '>=', $request->date('from')))
@@ -69,7 +70,7 @@ class AttendanceSessionController extends Controller
             description: $request->string('reason')->toString(),
         );
 
-        return new AttendanceSessionResource($attendanceSession->fresh());
+        return new AttendanceSessionResource($attendanceSession->fresh()->load('student:id,matricula,nombre'));
     }
 
     /**

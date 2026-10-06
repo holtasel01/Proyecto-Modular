@@ -35,7 +35,7 @@ class StudentFacePhotoController extends Controller
         $embedding = $student->faceEmbedding;
 
         if (! $embedding) {
-            return response()->json(['existe' => false]);
+            return response()->json(['data' => ['existe' => false]]);
         }
 
         return new FaceProfileResource($embedding);

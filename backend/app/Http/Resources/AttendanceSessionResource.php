@@ -12,6 +12,8 @@ class AttendanceSessionResource extends JsonResource
         return [
             'id' => $this->id,
             'student_id' => $this->student_id,
+            'matricula' => $this->whenLoaded('student', fn () => $this->student->matricula),
+            'nombre' => $this->whenLoaded('student', fn () => $this->student->nombre),
             'started_at' => $this->started_at,
             'ended_at' => $this->ended_at,
             'duration_minutes' => $this->duration_minutes,

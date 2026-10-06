@@ -36,7 +36,7 @@ export function AdminStudentDetail() {
 
   useEffect(() => {
     loadStudent();
-    getFaceProfile(studentId).then(setFaceProfile);
+    getFaceProfile(studentId).then(({ data }) => setFaceProfile(data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId]);
 
@@ -59,8 +59,8 @@ export function AdminStudentDetail() {
     setReplaceError(null);
     setReplacing(true);
     try {
-      const profile = await replaceFacePhoto(studentId, file);
-      setFaceProfile(profile);
+      const { data } = await replaceFacePhoto(studentId, file);
+      setFaceProfile(data);
     } catch (err) {
       setReplaceError(err instanceof ApiError ? err.message : "No se pudo reemplazar la foto.");
     } finally {

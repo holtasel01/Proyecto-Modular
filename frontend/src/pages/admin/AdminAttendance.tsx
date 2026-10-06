@@ -3,6 +3,12 @@ import { correctSession, labStatus, listSessions, type SessionFilters } from "..
 import { ApiError } from "../../api/client";
 import type { AttendanceSession, LabStatusEntry } from "../../types";
 
+const STATUS_LABELS: Record<string, string> = {
+  open: "Abierta",
+  closed: "Cerrada",
+  inconsistent: "Inconsistente",
+};
+
 function toInputDateTime(value: string | null): string {
   if (!value) return "";
   return new Date(value).toISOString().slice(0, 16);
@@ -116,11 +122,15 @@ export function AdminAttendance() {
               {sessions.map((session) => (
                 <Fragment key={session.id}>
                   <tr>
-                    <td>#{session.studentId}</td>
+                    <td>
+                      {session.nombre ? `${session.nombre} (${session.matricula})` : `#${session.studentId}`}
+                    </td>
                     <td>{new Date(session.startedAt).toLocaleString()}</td>
                     <td>{session.endedAt ? new Date(session.endedAt).toLocaleString() : "—"}</td>
                     <td>
-                      <span className={`badge badge-${session.status}`}>{session.status}</span>
+                      <span className={`badge badge-${session.status}`}>
+                        {STATUS_LABELS[session.status] ?? session.status}
+                      </span>
                     </td>
                     <td>
                       <button type="button" onClick={() => startEditing(session)}>

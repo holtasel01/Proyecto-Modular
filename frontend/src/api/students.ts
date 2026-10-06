@@ -25,23 +25,23 @@ export function updateStudent(id: number, input: Partial<StudentInput & { estado
   return apiRequest<{ data: Student }>(`/students/${id}`, { method: "PATCH", body: input });
 }
 
-export function getFaceProfile(studentId: number): Promise<FaceProfile> {
-  return apiRequest<FaceProfile>(`/students/${studentId}/face-profile`);
+export function getFaceProfile(studentId: number): Promise<{ data: FaceProfile }> {
+  return apiRequest<{ data: FaceProfile }>(`/students/${studentId}/face-profile`);
 }
 
-export function uploadFacePhoto(studentId: number, photo: File): Promise<FaceProfile> {
+export function uploadFacePhoto(studentId: number, photo: File): Promise<{ data: FaceProfile }> {
   const formData = new FormData();
   formData.append("photo", photo);
-  return apiRequest<FaceProfile>(`/students/${studentId}/face-photo`, {
+  return apiRequest<{ data: FaceProfile }>(`/students/${studentId}/face-photo`, {
     method: "POST",
     body: formData,
   });
 }
 
-export function replaceFacePhoto(studentId: number, photo: File): Promise<FaceProfile> {
+export function replaceFacePhoto(studentId: number, photo: File): Promise<{ data: FaceProfile }> {
   const formData = new FormData();
   formData.append("photo", photo);
-  return apiRequest<FaceProfile>(`/students/${studentId}/face-photo`, {
+  return apiRequest<{ data: FaceProfile }>(`/students/${studentId}/face-photo`, {
     method: "POST",
     body: withMethodSpoof(formData, "PUT"),
   });

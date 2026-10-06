@@ -10,6 +10,7 @@ export function AdminDevices() {
   const [newToken, setNewToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   function refresh() {
     listDevices().then((r) => setDevices(r.data));
@@ -26,6 +27,7 @@ export function AdminDevices() {
     try {
       const { data } = await createDevice(nombre, ubicacion || undefined);
       setNewToken(data.plainTextToken ?? null);
+      setCopied(false);
       setNombre("");
       setUbicacion("");
       refresh();
@@ -34,6 +36,13 @@ export function AdminDevices() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleCopyToken() {
+    if (!newToken) return;
+    await navigator.clipboard.writeText(newToken);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   async function handleRevoke(id: number) {
@@ -52,9 +61,14 @@ export function AdminDevices() {
             No se podrá volver a mostrar.
           </p>
           <pre className="token-box">{newToken}</pre>
-          <button type="button" onClick={() => setNewToken(null)}>
-            Ya lo copié
-          </button>
+          <div className="row-gap">
+            <button type="button" onClick={() => void handleCopyToken()}>
+              {copied ? "¡Copiado!" : "Copiar token"}
+            </button>
+            <button type="button" onClick={() => setNewToken(null)}>
+              Ya lo copié
+            </button>
+          </div>
         </section>
       )}
 
