@@ -19,12 +19,13 @@ class SyncController extends Controller
             ->where('estado', 'activo')
             ->whereHas('faceEmbedding')
             ->with('faceEmbedding:id,student_id,vector,modelo')
-            ->get(['id', 'matricula']);
+            ->get(['id', 'matricula', 'nombre']);
 
         return response()->json([
             'catalog' => $students->map(fn (Student $student) => [
                 'student_id' => $student->id,
                 'matricula' => $student->matricula,
+                'nombre' => $student->nombre,
                 'embedding' => $student->faceEmbedding->vector,
                 'modelo' => $student->faceEmbedding->modelo,
             ]),
