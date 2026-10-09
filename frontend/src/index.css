@@ -434,10 +434,14 @@ button[type="button"]:not(:only-child) {
   color: #15803d;
 }
 
-.badge-inconsistent,
-.badge-resolved {
+.badge-inconsistent {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.badge-resolved {
+  background: #dcfce7;
+  color: #15803d;
 }
 
 .badge-baja {

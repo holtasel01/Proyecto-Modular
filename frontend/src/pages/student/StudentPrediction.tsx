@@ -44,7 +44,7 @@ export function StudentPrediction() {
 
         {data.metaCumplida && (
           <p className="muted" style={{ marginTop: 8 }}>
-            🎉 Ya completaste tu meta de horas de servicio social.
+            Ya completaste tu meta de horas de servicio social.
           </p>
         )}
       </section>

@@ -36,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
         // manda 'identifier' (matrícula o correo), /register manda 'email'.
         RateLimiter::for('login', function (Request $request) {
             $key = (string) ($request->input('identifier') ?? $request->input('email'));
+            // En minúsculas: si no, variar mayúsculas del correo daría un
+            // contador nuevo por cada variante y se saltaría el límite.
+            $key = mb_strtolower(trim($key));
 
             return Limit::perMinute(5)->by($key.'|'.$request->ip());
         });

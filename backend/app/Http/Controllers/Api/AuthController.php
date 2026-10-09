@@ -57,7 +57,13 @@ class AuthController extends Controller
 
         if (
             $email === null
-            || ! Auth::guard('web')->attempt(['email' => $email, 'password' => $request->validated('password')])
+            || ! Auth::guard('web')->attempt([
+                // PostgreSQL compara texto distinguiendo mayúsculas; el correo
+                // no debe distinguirlas ("Juan@x.com" = "juan@x.com"). LOWER()
+                // en la columna cubre también cuentas ya guardadas con mayúsculas.
+                fn ($query) => $query->whereRaw('LOWER(email) = ?', [$email]),
+                'password' => $request->validated('password'),
+            ])
         ) {
             abort(422, 'Credenciales inválidas.');
         }
@@ -75,11 +81,15 @@ class AuthController extends Controller
      */
     private function resolveEmail(string $identifier): ?string
     {
+        $identifier = trim($identifier);
+
         if (str_contains($identifier, '@')) {
-            return $identifier;
+            return mb_strtolower($identifier);
         }
 
-        return Student::query()->where('matricula', $identifier)->first()?->user?->email;
+        $email = Student::query()->where('matricula', $identifier)->first()?->user?->email;
+
+        return $email === null ? null : mb_strtolower($email);
     }
 
     public function logout(Request $request): JsonResponse

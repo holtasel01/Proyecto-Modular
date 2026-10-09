@@ -11,6 +11,11 @@ const TYPE_LABELS: Record<string, string> = {
   corregido_manualmente: "Corrección manual",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  open: "Abierta",
+  resolved: "Resuelta",
+};
+
 export function AdminIncidents() {
   const [incidents, setIncidents] = useState<Incident[] | null>(null);
   const [statusFilter, setStatusFilter] = useState("open");
@@ -75,7 +80,9 @@ export function AdminIncidents() {
                   <td>{TYPE_LABELS[incident.type] ?? incident.type}</td>
                   <td>{incident.description ?? "—"}</td>
                   <td>
-                    <span className={`badge badge-${incident.status}`}>{incident.status}</span>
+                    <span className={`badge badge-${incident.status}`}>
+                      {STATUS_LABELS[incident.status] ?? incident.status}
+                    </span>
                   </td>
                   <td>{new Date(incident.createdAt).toLocaleString()}</td>
                   <td>

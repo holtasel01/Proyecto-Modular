@@ -85,7 +85,7 @@ export function StudentDashboard() {
         {faceProfile === null && <p>Cargando…</p>}
         {faceProfile?.existe && (
           <p>
-            ✅ Ya tienes un enrolamiento registrado ({faceProfile.modelo}). Si necesitas cambiar tu
+            Ya tienes un enrolamiento registrado ({faceProfile.modelo}). Si necesitas cambiar tu
             foto, pídele al administrador que la reemplace.
           </p>
         )}

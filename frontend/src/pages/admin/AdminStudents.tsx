@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { createStudent, listStudents } from "../../api/students";
 import { ApiError } from "../../api/client";
+import { IconCheck } from "../../components/icons";
 import type { Student } from "../../types";
 
 export function AdminStudents() {
@@ -110,7 +111,13 @@ export function AdminStudents() {
                   <td>{student.nombre}</td>
                   <td>{student.carrera ?? "—"}</td>
                   <td>{student.estado}</td>
-                  <td>{student.tieneEnrolamientoFacial ? "✅" : "—"}</td>
+                  <td>
+                    {student.tieneEnrolamientoFacial ? (
+                      <IconCheck width={16} height={16} className="success-text" />
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td>
                     <Link to={`/estudiantes/${student.id}`}>Ver</Link>
                   </td>

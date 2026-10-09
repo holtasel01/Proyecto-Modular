@@ -25,6 +25,32 @@ class LoginTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_email_is_case_insensitive_on_login(): void
+    {
+        $user = User::factory()->create(['email' => 'juan@test.com', 'password' => bcrypt('secreto123')]);
+
+        $response = $this->withHeader('Referer', 'http://localhost:5173/')->postJson('/api/login', [
+            'identifier' => 'Juan@Test.com',
+            'password' => 'secreto123',
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.id', $user->id);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_account_stored_with_uppercase_email_can_still_log_in(): void
+    {
+        $user = User::factory()->create(['email' => 'Maria@Test.com', 'password' => bcrypt('secreto123')]);
+
+        $response = $this->withHeader('Referer', 'http://localhost:5173/')->postJson('/api/login', [
+            'identifier' => 'maria@test.com',
+            'password' => 'secreto123',
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.id', $user->id);
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_can_log_in_with_matricula_instead_of_email(): void
     {
         $user = User::factory()->create(['password' => bcrypt('secreto123')]);
