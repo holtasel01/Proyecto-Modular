@@ -18,9 +18,11 @@ const LABEL_TO_COLOR: Record<ClusterLabel, string> = {
 const CHART_SIZE = 360;
 const CHART_PADDING = 32;
 
-function ScatterChart({ result }: { result: StudentClusterResult }) {
-  const xs = result.clusters.map((c) => c.features.horasPromedioSemana);
-  const ys = result.clusters.map((c) => c.features.sesionesPromedioSemana);
+type IndexedCluster = StudentClusterResult["clusters"][number] & { index: number };
+
+function ScatterChart({ points }: { points: IndexedCluster[] }) {
+  const xs = points.map((c) => c.features.horasPromedioSemana);
+  const ys = points.map((c) => c.features.sesionesPromedioSemana);
   const xMax = Math.max(1, ...xs);
   const yMax = Math.max(1, ...ys);
 
@@ -32,7 +34,7 @@ function ScatterChart({ result }: { result: StudentClusterResult }) {
     <svg
       viewBox={`0 0 ${CHART_SIZE} ${CHART_SIZE}`}
       role="img"
-      aria-label="Dispersión de horas promedio por semana contra sesiones promedio por semana, coloreada por grupo"
+      aria-label="Dispersión de horas promedio por semana contra sesiones promedio por semana, coloreada por grupo, con el número de cada estudiante (ver tabla)"
       style={{ width: "100%", maxWidth: 420, height: "auto" }}
     >
       <line
@@ -63,28 +65,50 @@ function ScatterChart({ result }: { result: StudentClusterResult }) {
         Sesiones promedio por semana
       </text>
 
-      {result.clusters.map((c) => (
-        <circle
-          key={c.studentId}
-          cx={toX(c.features.horasPromedioSemana)}
-          cy={toY(c.features.sesionesPromedioSemana)}
-          r={5}
-          fill={LABEL_TO_COLOR[c.clusterLabel]}
-          fillOpacity={0.75}
-        >
-          <title>
-            {c.nombre} ({c.matricula}) — {c.clusterLabel}
-          </title>
-        </circle>
+      {points.map((c) => (
+        <g key={c.studentId}>
+          <circle
+            cx={toX(c.features.horasPromedioSemana)}
+            cy={toY(c.features.sesionesPromedioSemana)}
+            r={9}
+            fill={LABEL_TO_COLOR[c.clusterLabel]}
+            fillOpacity={0.75}
+          >
+            <title>
+              #{c.index} — {c.nombre} ({c.matricula}) — {c.clusterLabel}
+            </title>
+          </circle>
+          <text
+            x={toX(c.features.horasPromedioSemana)}
+            y={toY(c.features.sesionesPromedioSemana)}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize="9"
+            fontWeight="700"
+            fill="#ffffff"
+            pointerEvents="none"
+          >
+            {c.index}
+          </text>
+        </g>
       ))}
     </svg>
   );
 }
 
+const GROUP_OPTIONS: Array<{ value: ClusterLabel | ""; label: string }> = [
+  { value: "", label: "Todos los grupos" },
+  { value: "baja actividad", label: "Baja actividad" },
+  { value: "actividad moderada", label: "Actividad moderada" },
+  { value: "alta actividad", label: "Alta actividad" },
+];
+
 export function AdminAnalytics() {
   const [result, setResult] = useState<StudentClusterResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [groupFilter, setGroupFilter] = useState<ClusterLabel | "">("");
 
   async function load(forceRefresh = false) {
     setLoading(true);
@@ -108,11 +132,21 @@ export function AdminAnalytics() {
     load(false);
   }, []);
 
-  const sortedClusters = result
-    ? [...result.clusters].sort(
-        (a, b) => b.cluster - a.cluster || b.features.horasAcumuladas - a.features.horasAcumuladas,
-      )
+  const indexedClusters: IndexedCluster[] = result
+    ? [...result.clusters]
+        .sort((a, b) => b.cluster - a.cluster || b.features.horasAcumuladas - a.features.horasAcumuladas)
+        .map((c, i) => ({ ...c, index: i + 1 }))
     : [];
+
+  const searchNormalized = search.trim().toLowerCase();
+  const filteredClusters = indexedClusters.filter((c) => {
+    const matchesGroup = !groupFilter || c.clusterLabel === groupFilter;
+    const matchesSearch =
+      !searchNormalized ||
+      c.nombre.toLowerCase().includes(searchNormalized) ||
+      c.matricula.toLowerCase().includes(searchNormalized);
+    return matchesGroup && matchesSearch;
+  });
 
   return (
     <section className="card">
@@ -150,12 +184,29 @@ export function AdminAnalytics() {
           </div>
 
           <div className="card-inset">
-            <ScatterChart result={result} />
+            <ScatterChart points={filteredClusters} />
+          </div>
+
+          <div className="inline-form">
+            <input
+              type="text"
+              placeholder="Buscar por nombre o matrícula…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value as ClusterLabel | "")}>
+              {GROUP_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <table className="table">
             <thead>
               <tr>
+                <th>#</th>
                 <th>Matrícula</th>
                 <th>Nombre</th>
                 <th>Horas acum.</th>
@@ -168,8 +219,16 @@ export function AdminAnalytics() {
               </tr>
             </thead>
             <tbody>
-              {sortedClusters.map((c) => (
+              {filteredClusters.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="muted">
+                    Ningún estudiante coincide con el filtro.
+                  </td>
+                </tr>
+              )}
+              {filteredClusters.map((c) => (
                 <tr key={c.studentId}>
+                  <td>{c.index}</td>
                   <td>{c.matricula}</td>
                   <td>{c.nombre}</td>
                   <td>{c.features.horasAcumuladas}</td>
