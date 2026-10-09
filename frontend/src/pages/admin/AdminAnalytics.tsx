@@ -36,11 +36,10 @@ function niceStep(max: number, targetTicks = 5): number {
 
 function buildTicks(max: number): number[] {
   const step = niceStep(max);
-  const ticks: number[] = [];
-  for (let v = 0; v <= max + step / 2; v += step) {
-    ticks.push(Math.round(v * 100) / 100);
-  }
-  return ticks;
+  // ceil asegura que el último tick sea >= max real, para que ningún punto
+  // quede fuera del área graficable (antes podía redondear hacia abajo).
+  const count = Math.max(1, Math.ceil(max / step));
+  return Array.from({ length: count + 1 }, (_, i) => Math.round(i * step * 100) / 100);
 }
 
 type IndexedCluster = StudentClusterResult["clusters"][number] & { index: number };
