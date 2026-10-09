@@ -15,76 +15,153 @@ const LABEL_TO_COLOR: Record<ClusterLabel, string> = {
   "alta actividad": "#15803d",
 };
 
-const CHART_SIZE = 360;
-const CHART_PADDING = 32;
+const CHART_WIDTH = 640;
+const CHART_HEIGHT = 340;
+const PADDING_LEFT = 46;
+const PADDING_RIGHT = 20;
+const PADDING_TOP = 16;
+const PADDING_BOTTOM = 46;
+// Piso del eje de horas/semana: aunque todos los estudiantes tengan menos,
+// se muestra la escala hasta aquí como referencia (si alguien supera esto,
+// el eje se extiende solo — ver buildTicks).
+const MIN_HOURS_AXIS_MAX = 30;
 
-function ScatterChart({ result }: { result: StudentClusterResult }) {
-  const xs = result.clusters.map((c) => c.features.horasPromedioSemana);
-  const ys = result.clusters.map((c) => c.features.sesionesPromedioSemana);
-  const xMax = Math.max(1, ...xs);
+/** Redondea a un paso "bonito" (1, 2, 2.5, 5, 10 × 10^n) para que las marcas
+ * del eje muestren números fáciles de leer en vez de decimales raros. */
+function niceStep(max: number, targetTicks = 5): number {
+  const rawStep = max / targetTicks;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
+  const normalized = rawStep / magnitude;
+  let niceNormalized = 1;
+  if (normalized > 5) niceNormalized = 10;
+  else if (normalized > 2) niceNormalized = 5;
+  else if (normalized > 1) niceNormalized = 2;
+  return niceNormalized * magnitude;
+}
+
+function buildTicks(max: number): number[] {
+  const step = niceStep(max);
+  // ceil asegura que el último tick sea >= max real, para que ningún punto
+  // quede fuera del área graficable (antes podía redondear hacia abajo).
+  const count = Math.max(1, Math.ceil(max / step));
+  return Array.from({ length: count + 1 }, (_, i) => Math.round(i * step * 100) / 100);
+}
+
+type IndexedCluster = StudentClusterResult["clusters"][number] & { index: number };
+
+function ScatterChart({ points }: { points: IndexedCluster[] }) {
+  const xs = points.map((c) => c.features.horasPromedioSemana);
+  const ys = points.map((c) => c.features.sesionesPromedioSemana);
+  const xMax = Math.max(1, MIN_HOURS_AXIS_MAX, ...xs);
   const yMax = Math.max(1, ...ys);
 
-  const plotSize = CHART_SIZE - CHART_PADDING * 2;
-  const toX = (v: number) => CHART_PADDING + (v / xMax) * plotSize;
-  const toY = (v: number) => CHART_SIZE - CHART_PADDING - (v / yMax) * plotSize;
+  const xTicks = buildTicks(xMax);
+  const yTicks = buildTicks(yMax);
+  const xAxisMax = xTicks[xTicks.length - 1];
+  const yAxisMax = yTicks[yTicks.length - 1];
+
+  const plotWidth = CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT;
+  const plotHeight = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+  const toX = (v: number) => PADDING_LEFT + (v / xAxisMax) * plotWidth;
+  const toY = (v: number) => CHART_HEIGHT - PADDING_BOTTOM - (v / yAxisMax) * plotHeight;
 
   return (
     <svg
-      viewBox={`0 0 ${CHART_SIZE} ${CHART_SIZE}`}
+      viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
       role="img"
-      aria-label="Dispersión de horas promedio por semana contra sesiones promedio por semana, coloreada por grupo"
-      style={{ width: "100%", maxWidth: 420, height: "auto" }}
+      aria-label="Dispersión de horas promedio por semana contra sesiones promedio por semana, con escala numérica en ambos ejes y coloreada por grupo"
+      style={{ width: "100%", maxWidth: 760, height: "auto" }}
     >
-      <line
-        x1={CHART_PADDING}
-        y1={CHART_SIZE - CHART_PADDING}
-        x2={CHART_SIZE - CHART_PADDING}
-        y2={CHART_SIZE - CHART_PADDING}
-        stroke="var(--border)"
-      />
-      <line
-        x1={CHART_PADDING}
-        y1={CHART_PADDING}
-        x2={CHART_PADDING}
-        y2={CHART_SIZE - CHART_PADDING}
-        stroke="var(--border)"
-      />
-      <text x={CHART_SIZE / 2} y={CHART_SIZE - 6} textAnchor="middle" fontSize="11" fill="var(--text-muted)">
+      {/* Líneas guía + números de la escala */}
+      {xTicks.map((t) => (
+        <g key={`x-${t}`}>
+          <line
+            x1={toX(t)}
+            y1={PADDING_TOP}
+            x2={toX(t)}
+            y2={CHART_HEIGHT - PADDING_BOTTOM}
+            stroke="var(--border)"
+            strokeDasharray={t === 0 ? undefined : "3 3"}
+          />
+          <text x={toX(t)} y={CHART_HEIGHT - PADDING_BOTTOM + 14} textAnchor="middle" fontSize="10" fill="var(--text-muted)">
+            {t}
+          </text>
+        </g>
+      ))}
+      {yTicks.map((t) => (
+        <g key={`y-${t}`}>
+          <line
+            x1={PADDING_LEFT}
+            y1={toY(t)}
+            x2={CHART_WIDTH - PADDING_RIGHT}
+            y2={toY(t)}
+            stroke="var(--border)"
+            strokeDasharray={t === 0 ? undefined : "3 3"}
+          />
+          <text x={PADDING_LEFT - 6} y={toY(t)} textAnchor="end" dominantBaseline="middle" fontSize="10" fill="var(--text-muted)">
+            {t}
+          </text>
+        </g>
+      ))}
+
+      <text x={(PADDING_LEFT + CHART_WIDTH - PADDING_RIGHT) / 2} y={CHART_HEIGHT - 4} textAnchor="middle" fontSize="11" fill="var(--text-muted)">
         Horas promedio por semana
       </text>
       <text
-        x={12}
-        y={CHART_SIZE / 2}
+        x={10}
+        y={(PADDING_TOP + CHART_HEIGHT - PADDING_BOTTOM) / 2}
         textAnchor="middle"
         fontSize="11"
         fill="var(--text-muted)"
-        transform={`rotate(-90 12 ${CHART_SIZE / 2})`}
+        transform={`rotate(-90 10 ${(PADDING_TOP + CHART_HEIGHT - PADDING_BOTTOM) / 2})`}
       >
         Sesiones promedio por semana
       </text>
 
-      {result.clusters.map((c) => (
-        <circle
-          key={c.studentId}
-          cx={toX(c.features.horasPromedioSemana)}
-          cy={toY(c.features.sesionesPromedioSemana)}
-          r={5}
-          fill={LABEL_TO_COLOR[c.clusterLabel]}
-          fillOpacity={0.75}
-        >
-          <title>
-            {c.nombre} ({c.matricula}) — {c.clusterLabel}
-          </title>
-        </circle>
+      {points.map((c) => (
+        <g key={c.studentId}>
+          <circle
+            cx={toX(c.features.horasPromedioSemana)}
+            cy={toY(c.features.sesionesPromedioSemana)}
+            r={9}
+            fill={LABEL_TO_COLOR[c.clusterLabel]}
+            fillOpacity={0.75}
+          >
+            <title>
+              #{c.index} — {c.nombre} ({c.matricula}) — {c.clusterLabel}
+            </title>
+          </circle>
+          <text
+            x={toX(c.features.horasPromedioSemana)}
+            y={toY(c.features.sesionesPromedioSemana)}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize="9"
+            fontWeight="700"
+            fill="#ffffff"
+            pointerEvents="none"
+          >
+            {c.index}
+          </text>
+        </g>
       ))}
     </svg>
   );
 }
 
+const GROUP_OPTIONS: Array<{ value: ClusterLabel | ""; label: string }> = [
+  { value: "", label: "Todos los grupos" },
+  { value: "baja actividad", label: "Baja actividad" },
+  { value: "actividad moderada", label: "Actividad moderada" },
+  { value: "alta actividad", label: "Alta actividad" },
+];
+
 export function AdminAnalytics() {
   const [result, setResult] = useState<StudentClusterResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [groupFilter, setGroupFilter] = useState<ClusterLabel | "">("");
 
   async function load(forceRefresh = false) {
     setLoading(true);
@@ -108,11 +185,21 @@ export function AdminAnalytics() {
     load(false);
   }, []);
 
-  const sortedClusters = result
-    ? [...result.clusters].sort(
-        (a, b) => b.cluster - a.cluster || b.features.horasAcumuladas - a.features.horasAcumuladas,
-      )
+  const indexedClusters: IndexedCluster[] = result
+    ? [...result.clusters]
+        .sort((a, b) => b.cluster - a.cluster || b.features.horasAcumuladas - a.features.horasAcumuladas)
+        .map((c, i) => ({ ...c, index: i + 1 }))
     : [];
+
+  const searchNormalized = search.trim().toLowerCase();
+  const filteredClusters = indexedClusters.filter((c) => {
+    const matchesGroup = !groupFilter || c.clusterLabel === groupFilter;
+    const matchesSearch =
+      !searchNormalized ||
+      c.nombre.toLowerCase().includes(searchNormalized) ||
+      c.matricula.toLowerCase().includes(searchNormalized);
+    return matchesGroup && matchesSearch;
+  });
 
   return (
     <section className="card">
@@ -150,12 +237,29 @@ export function AdminAnalytics() {
           </div>
 
           <div className="card-inset">
-            <ScatterChart result={result} />
+            <ScatterChart points={filteredClusters} />
+          </div>
+
+          <div className="inline-form">
+            <input
+              type="text"
+              placeholder="Buscar por nombre o matrícula…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value as ClusterLabel | "")}>
+              {GROUP_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <table className="table">
             <thead>
               <tr>
+                <th>#</th>
                 <th>Matrícula</th>
                 <th>Nombre</th>
                 <th>Horas acum.</th>
@@ -168,8 +272,16 @@ export function AdminAnalytics() {
               </tr>
             </thead>
             <tbody>
-              {sortedClusters.map((c) => (
+              {filteredClusters.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="muted">
+                    Ningún estudiante coincide con el filtro.
+                  </td>
+                </tr>
+              )}
+              {filteredClusters.map((c) => (
                 <tr key={c.studentId}>
+                  <td>{c.index}</td>
                   <td>{c.matricula}</td>
                   <td>{c.nombre}</td>
                   <td>{c.features.horasAcumuladas}</td>
