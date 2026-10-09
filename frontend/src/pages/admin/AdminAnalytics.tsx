@@ -16,7 +16,32 @@ const LABEL_TO_COLOR: Record<ClusterLabel, string> = {
 };
 
 const CHART_SIZE = 360;
-const CHART_PADDING = 32;
+const PADDING_LEFT = 46;
+const PADDING_RIGHT = 16;
+const PADDING_TOP = 16;
+const PADDING_BOTTOM = 46;
+
+/** Redondea a un paso "bonito" (1, 2, 2.5, 5, 10 × 10^n) para que las marcas
+ * del eje muestren números fáciles de leer en vez de decimales raros. */
+function niceStep(max: number, targetTicks = 5): number {
+  const rawStep = max / targetTicks;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
+  const normalized = rawStep / magnitude;
+  let niceNormalized = 1;
+  if (normalized > 5) niceNormalized = 10;
+  else if (normalized > 2) niceNormalized = 5;
+  else if (normalized > 1) niceNormalized = 2;
+  return niceNormalized * magnitude;
+}
+
+function buildTicks(max: number): number[] {
+  const step = niceStep(max);
+  const ticks: number[] = [];
+  for (let v = 0; v <= max + step / 2; v += step) {
+    ticks.push(Math.round(v * 100) / 100);
+  }
+  return ticks;
+}
 
 type IndexedCluster = StudentClusterResult["clusters"][number] & { index: number };
 
@@ -26,41 +51,65 @@ function ScatterChart({ points }: { points: IndexedCluster[] }) {
   const xMax = Math.max(1, ...xs);
   const yMax = Math.max(1, ...ys);
 
-  const plotSize = CHART_SIZE - CHART_PADDING * 2;
-  const toX = (v: number) => CHART_PADDING + (v / xMax) * plotSize;
-  const toY = (v: number) => CHART_SIZE - CHART_PADDING - (v / yMax) * plotSize;
+  const xTicks = buildTicks(xMax);
+  const yTicks = buildTicks(yMax);
+  const xAxisMax = xTicks[xTicks.length - 1];
+  const yAxisMax = yTicks[yTicks.length - 1];
+
+  const plotWidth = CHART_SIZE - PADDING_LEFT - PADDING_RIGHT;
+  const plotHeight = CHART_SIZE - PADDING_TOP - PADDING_BOTTOM;
+  const toX = (v: number) => PADDING_LEFT + (v / xAxisMax) * plotWidth;
+  const toY = (v: number) => CHART_SIZE - PADDING_BOTTOM - (v / yAxisMax) * plotHeight;
 
   return (
     <svg
       viewBox={`0 0 ${CHART_SIZE} ${CHART_SIZE}`}
       role="img"
-      aria-label="Dispersión de horas promedio por semana contra sesiones promedio por semana, coloreada por grupo, con el número de cada estudiante (ver tabla)"
+      aria-label="Dispersión de horas promedio por semana contra sesiones promedio por semana, con escala numérica en ambos ejes y coloreada por grupo"
       style={{ width: "100%", maxWidth: 420, height: "auto" }}
     >
-      <line
-        x1={CHART_PADDING}
-        y1={CHART_SIZE - CHART_PADDING}
-        x2={CHART_SIZE - CHART_PADDING}
-        y2={CHART_SIZE - CHART_PADDING}
-        stroke="var(--border)"
-      />
-      <line
-        x1={CHART_PADDING}
-        y1={CHART_PADDING}
-        x2={CHART_PADDING}
-        y2={CHART_SIZE - CHART_PADDING}
-        stroke="var(--border)"
-      />
-      <text x={CHART_SIZE / 2} y={CHART_SIZE - 6} textAnchor="middle" fontSize="11" fill="var(--text-muted)">
+      {/* Líneas guía + números de la escala */}
+      {xTicks.map((t) => (
+        <g key={`x-${t}`}>
+          <line
+            x1={toX(t)}
+            y1={PADDING_TOP}
+            x2={toX(t)}
+            y2={CHART_SIZE - PADDING_BOTTOM}
+            stroke="var(--border)"
+            strokeDasharray={t === 0 ? undefined : "3 3"}
+          />
+          <text x={toX(t)} y={CHART_SIZE - PADDING_BOTTOM + 14} textAnchor="middle" fontSize="9" fill="var(--text-muted)">
+            {t}
+          </text>
+        </g>
+      ))}
+      {yTicks.map((t) => (
+        <g key={`y-${t}`}>
+          <line
+            x1={PADDING_LEFT}
+            y1={toY(t)}
+            x2={CHART_SIZE - PADDING_RIGHT}
+            y2={toY(t)}
+            stroke="var(--border)"
+            strokeDasharray={t === 0 ? undefined : "3 3"}
+          />
+          <text x={PADDING_LEFT - 6} y={toY(t)} textAnchor="end" dominantBaseline="middle" fontSize="9" fill="var(--text-muted)">
+            {t}
+          </text>
+        </g>
+      ))}
+
+      <text x={(PADDING_LEFT + CHART_SIZE - PADDING_RIGHT) / 2} y={CHART_SIZE - 4} textAnchor="middle" fontSize="11" fill="var(--text-muted)">
         Horas promedio por semana
       </text>
       <text
-        x={12}
-        y={CHART_SIZE / 2}
+        x={10}
+        y={(PADDING_TOP + CHART_SIZE - PADDING_BOTTOM) / 2}
         textAnchor="middle"
         fontSize="11"
         fill="var(--text-muted)"
-        transform={`rotate(-90 12 ${CHART_SIZE / 2})`}
+        transform={`rotate(-90 10 ${(PADDING_TOP + CHART_SIZE - PADDING_BOTTOM) / 2})`}
       >
         Sesiones promedio por semana
       </text>
